@@ -4,11 +4,10 @@ import scipy.stats as st
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from sklearn.model_selection import RepeatedKFold
 from sklearn.metrics import mean_squared_error
 
 from data_loading import load_data, add_bias
-from utils import cross_norm_sqrd
+from utils import cross_norm_sqrd, RepeatedKFold
 
 
 def get_weights(x_test, x_train, tau):
@@ -146,7 +145,7 @@ def model(x):
     return lwlr(x, x_train, y_train, tau=0.2)
 
 
-def repeated_k_fold(x, y, tau, n_splits=2, n_repeats=2, random_state=2652124):
+def repeated_k_fold(x, y, tau, n_splits=2, n_repeats=2, random_state=984613):
     """
     Do k-fold cross validation multiple times and return an error array for every model trained.
 
