@@ -51,12 +51,13 @@ def regress(x_test, x_train, weights, y_train):
 
 def lwlr(x_test, x_train, y_train, tau=0.2):
     """
+    Add the bias term to feature vectors and perform locally weighted linear regression.
 
-    :param x_test:
-    :param x_train:
-    :param y_train:
-    :param tau:
-    :return:
+    :param x_test: np.ndarray; shape M x num_features
+    :param x_train: np.ndarray; shape N x num_features
+    :param y_train: np.ndarray; shape N x 1
+    :param tau: float; hyperparameter
+    :return: np.ndarray; shape M x 1; test predictions
     """
     x_test_biased = add_bias(x_test)
     x_train_biased = add_bias(x_train)
