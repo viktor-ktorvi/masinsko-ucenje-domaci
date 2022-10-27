@@ -205,7 +205,7 @@ def hyperparameter_log_search(x, y, start, stop, num=1, k_splits=2, n_repeats=1,
     plt.xscale('log')
     plt.xlabel(r'$\tau$')
     plt.ylabel('rmse')
-    plt.title(r'Koren srednje kvadratne greske u funkciji hiperparametra $\tau$')
+    plt.title(r'Koren srednje kvadratne greške u funkciji hiperparametra $\tau$')
     plt.legend()
 
 
