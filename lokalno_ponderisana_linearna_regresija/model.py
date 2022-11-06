@@ -6,8 +6,8 @@ from tqdm import tqdm
 
 from sklearn.metrics import mean_squared_error
 
-from data_loading import load_data, add_bias
-from utils import cross_norm_sqrd, RepeatedKFold
+from data_loading.data_loading import load_data, add_bias
+from utils.utils import cross_norm_sqrd, RepeatedKFold
 
 
 def get_weights(x_test, x_train, tau):
@@ -217,7 +217,7 @@ if __name__ == '__main__':
     if show_example['2d']:
         example_2d()
 
-    x, y = load_data()
+    x, y = load_data('data.csv')
 
     hyperparameter_log_search(x, y, start=-2, stop=0, num=10, k_splits=5, n_repeats=2, confidence=0.95)
 

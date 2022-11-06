@@ -3,13 +3,13 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def load_data():
+def load_data(csv_path):
     """
     Load data stored in 'data.csv' where the features are stored in the first n-1 columns and the labels are in the last
     column.
     :return: features and labels (np.ndarray; shape num_samples x num_features, np.ndarray; shape num_samples x 1).
     """
-    dataframe = pd.read_csv('data.csv', header=None)
+    dataframe = pd.read_csv(csv_path, header=None)
     dataframe_np = dataframe.to_numpy()
 
     return dataframe_np[:, :-1], dataframe_np[:, -1].reshape(dataframe_np.shape[0], 1)
@@ -26,7 +26,7 @@ def add_bias(x):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('data.csv', header=None)
+    df = pd.read_csv('../lokalno_ponderisana_linearna_regresija/data.csv', header=None)
     df_numpy = df.to_numpy()
 
     print('Data stats\n')
