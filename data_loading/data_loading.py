@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 def load_data(csv_path):
     """
-    Load data stored in 'data.csv' where the features are stored in the first n-1 columns and the labels are in the last
+    Load data stored in csv_path where the features are stored in the first n-1 columns and the labels are in the last
     column.
     :return: features and labels (np.ndarray; shape num_samples x num_features, np.ndarray; shape num_samples x 1).
     """
