@@ -26,7 +26,8 @@ def add_bias(x):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('../lokalno_ponderisana_linearna_regresija/data.csv', header=None)
+    data_path = '../generalizovani_linearni_modeli_i_generativni_algoritmi/multiclass_data.csv'
+    df = pd.read_csv(data_path, header=None)
     df_numpy = df.to_numpy()
 
     print('Data stats\n')
@@ -34,7 +35,7 @@ if __name__ == '__main__':
 
     corr = df.corr()
 
-    x, y = load_data()
+    x, y = load_data(data_path)
 
     n = x.shape[1]
 
