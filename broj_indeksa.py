@@ -14,5 +14,29 @@ def domaci_1(broj, godina=None):
     return ind, zadaci[ind]
 
 
+def domaci_2(broj, godina=None):
+    b = []
+
+    while broj:
+        b.append(broj % 10)
+        broj //= 10
+
+    b = b[::-1]
+
+    if b[2] % 2 == 0:
+        glm = 'LR'
+    else:
+        glm = 'softmax'
+
+    if b[3] % 2 == 0:
+        ga = 'GDA'
+    else:
+        ga = 'GNB'
+
+    return b, glm, ga
+
+
 if __name__ == '__main__':
-    print(domaci_1(3140))
+    broj = 3140
+    print('Domaci 1: ', domaci_1(broj))
+    print('Domaci 2: ', domaci_2(broj))
