@@ -8,7 +8,8 @@ from sklearn.metrics import accuracy_score
 
 from data_loading.data_loading import load_data, add_bias
 from utils.utils import normalize
-from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.logistic_regression import predict_binary, predict_multiclass
+from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.logistic_regression import \
+    predict_binary, predict_multiclass
 
 
 def dataset_visualization(x=None, y=None):
@@ -126,7 +127,7 @@ def dataset_area_class_visualization(x_transform, y, classifiers, resolution=(50
                          np.linspace(y_min, y_max, resolution[1]))
     background_points = np.vstack((xx.ravel(), yy.ravel())).T
 
-    plt.figure()
+    fig = plt.figure()
     plt.title('Odbirci i oblasti klasifikacije')
     for clss in np.unique(y):
         plt.scatter(*[x_transform[y.squeeze() == clss, i] for i in range(2)], label="Klasa {:d}".format(int(clss)))
