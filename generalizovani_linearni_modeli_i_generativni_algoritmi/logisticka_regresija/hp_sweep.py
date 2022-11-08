@@ -59,7 +59,8 @@ if __name__ == '__main__':
         except yaml.YAMLError as exc:
             print(exc)
 
-    X_train_transformed, X_test_transformed, y_train, y_test = load_transformed_data('../multiclass_data.csv',
+    data_path = os.path.join(__location__, "../multiclass_data.csv")
+    X_train_transformed, X_test_transformed, y_train, y_test = load_transformed_data(data_path,
                                                                                      test_size=0.2, norm=True,
                                                                                      dimensionality=2)
 
