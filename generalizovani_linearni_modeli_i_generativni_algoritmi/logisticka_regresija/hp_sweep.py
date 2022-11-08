@@ -22,7 +22,11 @@ def logged_training(X_train_transformed, X_test_transformed, y_train, y_test):
     :param y_test: np.ndarray; shape num_test_samples x 1
     :return:
     """
-    with wandb.init(project="mu-domaci-logisticka-regresija"):
+
+    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+    default_config_path = os.path.join(__location__, "config-defaults.yaml")
+
+    with wandb.init(project="mu-domaci-logisticka-regresija", config=default_config_path):
         classifiers, loggers = train_one_vs_rest(X_train_transformed, y_train, epochs=wandb.config.epochs,
                                                  lr=wandb.config.lr, batch_size=wandb.config.batch_size,
                                                  log=True)
