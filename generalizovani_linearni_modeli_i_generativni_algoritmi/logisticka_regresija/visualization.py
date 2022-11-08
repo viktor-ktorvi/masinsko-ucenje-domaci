@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score
 
 from data_loading.data_loading import load_data, add_bias
 from utils.utils import normalize
-from logistic_regression import predict_binary, predict_multiclass
+from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.logistic_regression import predict_binary, predict_multiclass
 
 
 def dataset_visualization(x=None, y=None):
