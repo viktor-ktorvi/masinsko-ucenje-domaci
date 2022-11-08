@@ -6,10 +6,12 @@ from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 
 from data_loading.data_loading import load_data, add_bias
-from logistic_regression import logistic_regression
+from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.logistic_regression import \
+    logistic_regression
 from utils.utils import normalize, DataLoader
 from utils.logger import ClassificationLogger
-from visualization import loss_and_acc_visualization, one_vs_all_visualization, dataset_area_class_visualization
+from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
+    loss_and_acc_visualization, one_vs_all_visualization, dataset_area_class_visualization
 
 
 def one_vs_rest_labels(y):
