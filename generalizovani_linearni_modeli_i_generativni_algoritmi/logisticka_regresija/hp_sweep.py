@@ -1,3 +1,4 @@
+import os
 import wandb
 import yaml
 
@@ -49,7 +50,10 @@ def logged_training(X_train_transformed, X_test_transformed, y_train, y_test):
 
 
 if __name__ == '__main__':
-    with open("hyperparameter_sweep.yaml", 'r') as stream:
+    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+    sweep_config_path = os.path.join(__location__, "hyperparameter_sweep.yaml")
+
+    with open(sweep_config_path, 'r') as stream:
         try:
             sweep_config = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
