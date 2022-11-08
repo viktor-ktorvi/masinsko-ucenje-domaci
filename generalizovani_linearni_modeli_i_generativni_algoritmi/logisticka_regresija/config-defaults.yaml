@@ -1,0 +1,10 @@
+# Logistic regression default parameters yaml
+epochs:
+  desc: Number of epochs to train over
+  value: 1000
+batch_size:
+  desc: Size of each mini-batch
+  value: 16
+lr:
+  desc: learning rate
+  value: 0.003

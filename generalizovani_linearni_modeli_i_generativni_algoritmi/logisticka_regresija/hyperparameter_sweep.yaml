@@ -1,0 +1,16 @@
+program: hp_sweep.py
+
+method: random
+
+parameters:
+  lr:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.1
+
+  batch_size:
+    distribution: int_uniform
+    min: 1
+    max: 96
+
+
