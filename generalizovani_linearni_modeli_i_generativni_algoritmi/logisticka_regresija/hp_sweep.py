@@ -5,8 +5,9 @@ import numpy as np
 
 from sklearn.metrics import accuracy_score
 
-from model import train_one_vs_rest
-from logistic_regression import predict_multiclass
+from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.model import train_one_vs_rest
+from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.logistic_regression import \
+    predict_multiclass
 
 from data_loading.data_loading import load_transformed_data
 
