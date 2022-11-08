@@ -9,7 +9,7 @@ from data_loading.data_loading import load_data, add_bias
 from logistic_regression import logistic_regression
 from utils.utils import normalize, DataLoader
 from utils.logger import ClassificationLogger
-from visualization import dataset_visualization, loss_and_acc_visualization, one_vs_all_visualization
+from visualization import loss_and_acc_visualization, one_vs_all_visualization, dataset_area_class_visualization
 
 
 def one_vs_rest_labels(y):
@@ -131,11 +131,16 @@ if __name__ == '__main__':
                                              log=True)
 
     # visualization
-    dataset_visualization(X_train_transformed, y_train)  # train set with labels
+    # dataset_visualization(X_train_transformed, y_train)  # train set with labels
 
     loss_and_acc_visualization(loggers)  # training graphs
 
     one_vs_all_visualization(classifiers, X_train_transformed, X_test_transformed, train_labels,
                              test_labels)  # trained classifiers
+
+    x_norm = normalize(x, mean, std)
+    x_transform = pca.transform(x_norm)
+
+    dataset_area_class_visualization(x_transform, y, classifiers, resolution=(200, 200))  # class areas
 
     plt.show()

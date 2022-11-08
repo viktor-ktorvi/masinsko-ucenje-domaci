@@ -1,13 +1,14 @@
 import numpy as np
 
 from matplotlib import pyplot as plt
+from matplotlib.colors import ListedColormap
 
 from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score
 
 from data_loading.data_loading import load_data, add_bias
 from utils.utils import normalize
-from logistic_regression import predict_binary
+from logistic_regression import predict_binary, predict_multiclass
 
 
 def dataset_visualization(x=None, y=None):
@@ -102,3 +103,43 @@ def one_vs_all_visualization(classifiers_2d, x_train_2d, x_test_2d, train_labels
         axs[i].set_ylim(-0.1 * y_range + np.min(x_train_2d[:, 1]),
                         0.1 * y_range + np.max(x_train_2d[:, 1]))
         axs[i].legend()
+
+
+def dataset_area_class_visualization(x_transform, y, classifiers, resolution=(50, 50)):
+    """
+    Plot data samples and color the background according to what every point would be classified.
+    :param x_transform: np.ndarray; shape num_samples x num_features; train feature matrix
+    :param y: np.ndarray; shape num_samples x 1; multiclass labels
+    :param classifiers: List[np.ndarray; shape num_features x 1; classifier coefficients]
+    :param resolution: tuple(int, int); (nrows, ncols)
+    :return:
+    """
+    x_min = np.min(x_transform[:, 0])
+    x_max = np.max(x_transform[:, 0])
+    y_min = np.min(x_transform[:, 1])
+    y_max = np.max(x_transform[:, 1])
+
+    x_range = x_max - x_min
+    y_range = y_max - y_min
+
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, resolution[0]),
+                         np.linspace(y_min, y_max, resolution[1]))
+    background_points = np.vstack((xx.ravel(), yy.ravel())).T
+
+    plt.figure()
+    plt.title('Odbirci i oblasti klasifikacije')
+    for clss in np.unique(y):
+        plt.scatter(*[x_transform[y.squeeze() == clss, i] for i in range(2)], label="Klasa {:d}".format(int(clss)))
+
+    plt.xlabel('$\hat{x}_1$')
+    plt.ylabel('$\hat{x}_2$')
+    plt.legend()
+
+    y_pred = predict_multiclass(background_points, classifiers).reshape(xx.shape)
+    cmap = ListedColormap(['paleturquoise', 'orange', 'lawngreen'])
+    plt.imshow(y_pred,
+               extent=[-0.1 * x_range + x_min, 0.1 * x_range + x_max, -0.1 * y_range + y_min, 0.1 * y_range + y_max],
+               cmap=cmap,
+               alpha=0.3,
+               aspect='auto',
+               origin='lower')
