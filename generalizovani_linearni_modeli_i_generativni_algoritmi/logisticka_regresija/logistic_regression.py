@@ -1,6 +1,7 @@
 import numpy as np
 
 from utils.utils import sigmoid
+from data_loading.data_loading import add_bias
 
 
 def logistic_regression(x, theta):
@@ -21,3 +22,15 @@ def predict_binary(x, theta):
     :return: np.ndarray; shape num_samples x 1
     """
     return np.round(logistic_regression(x, theta))
+
+
+def predict_multiclass(x, classifiers):
+    """
+    Perform 'one-vs-rest' logistic regression and round the result.
+    :param x: np.ndarray; shape num_samples x num_features; feature matrix
+    :param classifiers: List[np.ndarray; shape num_features x 1; classifier coefficients]
+    :return: List[int]; shape num_samples; multiclass label predictions
+    """
+    x_biased = add_bias(x)
+    lr_out = np.array([logistic_regression(x_biased, classifiers[i]) for i in range(len(classifiers))]).squeeze()
+    return np.argmax(lr_out, axis=0)
