@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -7,7 +9,7 @@ from sklearn.model_selection import train_test_split
 
 from data_loading.data_loading import load_data, add_bias
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.logistic_regression import \
-    logistic_regression
+    logistic_regression, predict_multiclass
 from utils.utils import normalize, DataLoader
 from utils.logger import ClassificationLogger
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
@@ -109,7 +111,10 @@ def train_one_vs_rest(x_train, y_train, epochs=1, lr=3e-4, batch_size=1, log=Fal
 
 
 if __name__ == '__main__':
-    x, y = load_data('../multiclass_data.csv')
+    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+    csv_path = os.path.join(__location__, '../multiclass_data.csv')
+
+    x, y = load_data(csv_path)
 
     # split
     X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=546315)
@@ -143,6 +148,8 @@ if __name__ == '__main__':
     x_norm = normalize(x, mean, std)
     x_transform = pca.transform(x_norm)
 
-    dataset_area_class_visualization(x_transform, y, classifiers, resolution=(200, 200))  # class areas
+    dataset_area_class_visualization(x_transform, y,
+                                     lambda background_points: predict_multiclass(background_points, classifiers),
+                                     resolution=(200, 200))  # class areas
 
     plt.show()
