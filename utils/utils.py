@@ -108,6 +108,10 @@ class DataLoader:
         """
         self.num_samples = num_samples
         self.batch_size = batch_size
+        if self.num_samples % self.batch_size == 0:
+            self.num_batches = self.num_samples // self.batch_size
+        else:
+            self.num_batches = self.num_samples // self.batch_size + 1
 
         self.rng = np.random.default_rng(random_state)
 
@@ -120,12 +124,20 @@ class DataLoader:
         self.rng.shuffle(indices)
 
         batches = []
-        for i in range(self.batch_size):
+        for i in range(self.num_batches):
             if (i + 1) * self.batch_size < len(indices):
                 batches.append(indices[i * self.batch_size:(i + 1) * self.batch_size])
             else:
                 batches.append(indices[i * self.batch_size:])
                 break
+
+        assert len(batches) == self.num_batches
+
+        running_sum = 0
+        for b in batches:
+            running_sum += len(b)
+
+        assert running_sum == self.num_samples
 
         return batches
 

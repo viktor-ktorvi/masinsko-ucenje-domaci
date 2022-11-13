@@ -134,7 +134,7 @@ if __name__ == '__main__':
     test_labels = one_vs_rest_labels(y_test)
 
     # train one vs rest classifiers
-    classifiers, loggers = train_one_vs_rest(X_train_transformed, y_train, epochs=1000, lr=0.003, batch_size=16,
+    classifiers, loggers = train_one_vs_rest(X_train_transformed, y_train, epochs=1000, lr=0.003, batch_size=32,
                                              log=True)
 
     # visualization
