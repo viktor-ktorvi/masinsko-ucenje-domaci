@@ -66,7 +66,8 @@ if __name__ == '__main__':
     data_path = os.path.join(__location__, "../multiclass_data.csv")
     X_train_transformed, X_test_transformed, y_train, y_test = load_transformed_data(data_path,
                                                                                      test_size=0.2, norm=True,
-                                                                                     dimensionality=2)
+                                                                                     dimensionality=2,
+                                                                                     random_state=56859)
 
     sweep_id = wandb.sweep(sweep_config, project="mu-domaci-logisticka-regresija")
     wandb.agent(sweep_id, function=lambda: logged_training(X_train_transformed, X_test_transformed, y_train, y_test),
