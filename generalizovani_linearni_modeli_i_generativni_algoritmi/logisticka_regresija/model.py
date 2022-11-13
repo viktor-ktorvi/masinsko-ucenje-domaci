@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 from sklearn.decomposition import PCA
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
 from data_loading.data_loading import load_data, add_bias
@@ -136,7 +137,7 @@ if __name__ == '__main__':
     test_labels = one_vs_rest_labels(y_test)
 
     # train one vs rest classifiers
-    classifiers, loggers = train_one_vs_rest(X_train_transformed, y_train, epochs=1000, lr=0.003, batch_size=32,
+    classifiers, loggers = train_one_vs_rest(X_train_transformed, y_train, epochs=1000, lr=0.03, batch_size=32,
                                              log=True)
 
     # visualization
@@ -154,4 +155,6 @@ if __name__ == '__main__':
                                      lambda background_points: predict_multiclass(background_points, classifiers),
                                      resolution=(200, 200))
 
+    test_acc = accuracy_score(y_test, predict_multiclass(X_test_transformed, classifiers))
+    print('Test accuracy: {:2.2f} %'.format(test_acc * 100))
     plt.show()
