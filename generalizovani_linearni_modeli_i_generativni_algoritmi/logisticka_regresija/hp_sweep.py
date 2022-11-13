@@ -70,4 +70,4 @@ if __name__ == '__main__':
 
     sweep_id = wandb.sweep(sweep_config, project="mu-domaci-logisticka-regresija")
     wandb.agent(sweep_id, function=lambda: logged_training(X_train_transformed, X_test_transformed, y_train, y_test),
-                count=100)
+                count=200)

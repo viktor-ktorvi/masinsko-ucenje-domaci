@@ -6,7 +6,7 @@ parameters:
   lr:
     distribution: log_uniform_values
     min: 0.000001
-    max: 3
+    max: 30
 
   batch_size:
     distribution: int_uniform
