@@ -3,43 +3,11 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score
 
-from data_loading.data_loading import load_data, add_bias
-from utils.utils import normalize
+from data_loading.data_loading import add_bias
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.logistic_regression import \
     predict_binary
-
-
-def dataset_visualization(x=None, y=None):
-    """
-    Reduce dataset dimensionality to 2D and scatter plot.
-    :param x: np.ndarray; shape num_samples x num_features; train feature matrix
-    :param y: np.ndarray; shape num_samples x 1; multiclass labels
-    :return:
-    """
-    if x is None or y is None:
-        x, y = load_data('../multiclass_data.csv')
-
-        x_norm, mean, std = normalize(x)
-
-        pca = PCA(n_components=2)
-        pca.fit(x_norm)
-
-        x_ = pca.transform(x_norm)
-    else:
-        x_ = x
-
-    classes = np.unique(y)
-
-    plt.figure()
-    plt.title('Odbirci nakon smanjenja dimenzije i normalizacije')
-    for i in range(len(classes)):
-        plt.scatter(x_[y.squeeze() == classes[i], 0], x_[y.squeeze() == classes[i], 1], label="Klasa {:d}".format(i))
-    plt.xlabel('$\hat{x}_1$')
-    plt.ylabel('$\hat{x}_2$')
-    plt.legend()
 
 
 def loss_and_acc_visualization(loggers):
@@ -128,10 +96,10 @@ def dataset_area_class_visualization(x_transform, y, predict_foo, resolution=(50
     background_points = np.vstack((xx.ravel(), yy.ravel())).T
 
     plt.figure()
-    plt.title('Odbirci i oblasti klasifikacije')
+    # plt.title('Odbirci i oblasti klasifikacije')
     colors = []
     for clss in np.unique(y):
-        p = plt.scatter(*[x_transform[y.squeeze() == clss, i] for i in range(2)], label="Klasa {:d}".format(int(clss)))
+        p = plt.scatter(*[x_transform[y.squeeze() == clss, i] for i in range(2)], label="klasa {:d}".format(int(clss)))
         colors.append(p.get_facecolor())
 
     plt.xlabel('$\hat{x}_1$')
