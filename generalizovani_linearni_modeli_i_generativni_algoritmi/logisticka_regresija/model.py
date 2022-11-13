@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -109,7 +111,10 @@ def train_one_vs_rest(x_train, y_train, epochs=1, lr=3e-4, batch_size=1, log=Fal
 
 
 if __name__ == '__main__':
-    x, y = load_data('../multiclass_data.csv')
+    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+    csv_path = os.path.join(__location__, '../multiclass_data.csv')
+
+    x, y = load_data(csv_path)
 
     # split
     X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=546315)
@@ -129,7 +134,7 @@ if __name__ == '__main__':
     test_labels = one_vs_rest_labels(y_test)
 
     # train one vs rest classifiers
-    classifiers, loggers = train_one_vs_rest(X_train_transformed, y_train, epochs=1000, lr=0.003, batch_size=16,
+    classifiers, loggers = train_one_vs_rest(X_train_transformed, y_train, epochs=1000, lr=0.003, batch_size=32,
                                              log=True)
 
     # visualization
