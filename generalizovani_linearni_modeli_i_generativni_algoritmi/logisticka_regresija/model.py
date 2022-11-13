@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 
 from data_loading.data_loading import load_data, add_bias
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.logistic_regression import \
-    logistic_regression
+    logistic_regression, lr_likelihood
 from utils.utils import normalize, DataLoader
 from utils.logger import ClassificationLogger
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
@@ -69,7 +69,9 @@ def train(x, y, epochs=1, lr=3e-4, batch_size=1, log=False):
 
             theta += lr * mean_update.reshape(theta.shape)  # update
 
-            logger.running_update(np.sum(np.abs(errors)), acc_cnt=np.sum(np.round(y_pred) == batch_y))  # log
+            logger.running_update(np.sum(np.abs(errors)),
+                                  acc_cnt=np.sum(np.round(y_pred) == batch_y),
+                                  likelihood=np.sum(lr_likelihood(y_pred, batch_y)))  # log
 
         logger.update(i, scale_factor=num_samples)  # log
 

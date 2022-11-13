@@ -34,3 +34,13 @@ def predict_multiclass(x, classifiers):
     x_biased = add_bias(x)
     lr_out = np.array([logistic_regression(x_biased, classifiers[i]) for i in range(len(classifiers))]).squeeze()
     return np.argmax(lr_out, axis=0)
+
+
+def lr_likelihood(h, y):
+    """
+    Bernoulli's distribution likelihood.
+    :param h: np.ndarray; shape num_samples x 1; discriminatory function output
+    :param y: np.ndarray; shape num_samples x 1; binary labels
+    :return:
+    """
+    return h ** y * (1 - h) ** (1 - y)
