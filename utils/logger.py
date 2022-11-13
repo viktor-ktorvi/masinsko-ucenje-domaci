@@ -53,6 +53,9 @@ class ClassificationLogger(Logger):
         self.running_acc_cnt = 0
         self.accuracy = np.zeros((epochs,))
 
+        self.running_likelihood = 0
+        self.likelihood = np.zeros((epochs,))
+
     def clear(self):
         """
         Clear running loss and accuracy count.
@@ -60,16 +63,19 @@ class ClassificationLogger(Logger):
         """
         super(ClassificationLogger, self).clear()
         self.running_acc_cnt = 0
+        self.running_likelihood = 0
 
-    def running_update(self, loss_val, acc_cnt=0):
+    def running_update(self, loss_val, acc_cnt=0, likelihood=0):
         """
         Update running loss.
-        :param loss_val: float; loss value
+        :param loss_val: float; sum loss value of batch
         :param acc_cnt: int; number of correct predictions
+        :param likelihood: float; sum likelihood of batch
         :return:
         """
         super(ClassificationLogger, self).running_update(loss_val)
         self.running_acc_cnt += acc_cnt
+        self.running_likelihood += likelihood
 
     def update(self, index, scale_factor=1):
         """
@@ -80,3 +86,4 @@ class ClassificationLogger(Logger):
         """
         super(ClassificationLogger, self).update(index, scale_factor)
         self.accuracy[index] = self.running_acc_cnt / scale_factor
+        self.likelihood[index] = self.running_likelihood / scale_factor
