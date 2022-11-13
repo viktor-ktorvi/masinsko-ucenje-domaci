@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 
 from data_loading.data_loading import load_data, add_bias
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.logistic_regression import \
-    logistic_regression, lr_likelihood
+    logistic_regression, predict_multiclass, lr_likelihood
 from utils.utils import normalize, DataLoader
 from utils.logger import ClassificationLogger
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
@@ -150,6 +150,8 @@ if __name__ == '__main__':
     x_norm = normalize(x, mean, std)
     x_transform = pca.transform(x_norm)
 
-    dataset_area_class_visualization(x_transform, y, classifiers, resolution=(200, 200))  # class areas
+    dataset_area_class_visualization(x_transform, y,
+                                     lambda background_points: predict_multiclass(background_points, classifiers),
+                                     resolution=(200, 200))
 
     plt.show()
