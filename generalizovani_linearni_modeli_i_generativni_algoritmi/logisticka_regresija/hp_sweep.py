@@ -37,18 +37,18 @@ def logged_training(X_train_transformed, X_test_transformed, y_train, y_test):
 
         wandb.log(
             {
-                "loss": wandb.plot.line_series(
-                    xs=x_values,
-                    ys=[loggers[i].loss for i in range(len(loggers))],
-                    keys=["Klasa {:d}".format(i) for i in range(len(loggers))],
-                    title="Apsolutna greska",
-                    xname="epohe"),
-                "accuracy": wandb.plot.line_series(
-                    xs=x_values,
-                    ys=[loggers[i].accuracy for i in range(len(loggers))],
-                    keys=["Klasa {:d}".format(i) for i in range(len(loggers))],
-                    title="Tacnost",
-                    xname="epohe"),
+                # "loss": wandb.plot.line_series(
+                #     xs=x_values,
+                #     ys=[loggers[i].loss for i in range(len(loggers))],
+                #     keys=["Klasa {:d}".format(i) for i in range(len(loggers))],
+                #     title="Apsolutna greska",
+                #     xname="epohe"),
+                # "accuracy": wandb.plot.line_series(
+                #     xs=x_values,
+                #     ys=[loggers[i].accuracy for i in range(len(loggers))],
+                #     keys=["Klasa {:d}".format(i) for i in range(len(loggers))],
+                #     title="Tacnost",
+                #     xname="epohe"),
                 "test accuracy": accuracy_score(y_test, test_predictions)
             })
 
