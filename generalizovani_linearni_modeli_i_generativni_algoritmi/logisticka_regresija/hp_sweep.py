@@ -37,18 +37,18 @@ def logged_training(X_train_transformed, X_test_transformed, y_train, y_test):
 
         wandb.log(
             {
-                # "loss": wandb.plot.line_series(
-                #     xs=x_values,
-                #     ys=[loggers[i].loss for i in range(len(loggers))],
-                #     keys=["Klasa {:d}".format(i) for i in range(len(loggers))],
-                #     title="Apsolutna greska",
-                #     xname="epohe"),
-                # "accuracy": wandb.plot.line_series(
-                #     xs=x_values,
-                #     ys=[loggers[i].accuracy for i in range(len(loggers))],
-                #     keys=["Klasa {:d}".format(i) for i in range(len(loggers))],
-                #     title="Tacnost",
-                #     xname="epohe"),
+                "loss": wandb.plot.line_series(
+                    xs=x_values,
+                    ys=[loggers[i].loss for i in range(len(loggers))],
+                    keys=["Klasa {:d}".format(i) for i in range(len(loggers))],
+                    title="Apsolutna greska",
+                    xname="epohe"),
+                "accuracy": wandb.plot.line_series(
+                    xs=x_values,
+                    ys=[loggers[i].accuracy for i in range(len(loggers))],
+                    keys=["Klasa {:d}".format(i) for i in range(len(loggers))],
+                    title="Tacnost",
+                    xname="epohe"),
                 "test accuracy": accuracy_score(y_test, test_predictions)
             })
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     data_path = os.path.join(__location__, "../multiclass_data.csv")
     X_train_transformed, X_test_transformed, y_train, y_test = load_transformed_data(data_path,
                                                                                      test_size=0.2, norm=True,
-                                                                                     dimensionality=None)
+                                                                                     dimensionality=2)
 
     sweep_id = wandb.sweep(sweep_config, project="mu-domaci-logisticka-regresija")
     wandb.agent(sweep_id, function=lambda: logged_training(X_train_transformed, X_test_transformed, y_train, y_test),
