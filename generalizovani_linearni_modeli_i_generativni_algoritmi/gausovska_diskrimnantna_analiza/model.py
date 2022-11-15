@@ -113,9 +113,9 @@ if __name__ == '__main__':
     y_pred = predict(X_test_transformed, mean_est, sigma_est, apriori_y_est)
     print('Test accuracy = {:2.2f}'.format(accuracy_score(np.round(y_test.squeeze()), y_pred)))
 
-    x_transform = X_train_transformed
-    y = y_train
-    resolution = (50, 50)
+    x_transform = np.vstack((X_train_transformed, X_test_transformed))
+    y = np.vstack((y_train, y_test))
+    resolution = (200, 200)
 
     estimated_gaussian_visualization(x_transform, y, mean_est, sigma_est, resolution)
 
