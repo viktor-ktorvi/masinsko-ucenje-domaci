@@ -79,7 +79,7 @@ def dataset_area_class_visualization(x_transform, y, predict_foo, resolution=(50
     Plot data samples and color the background according to what every point would be classified.
     :param x_transform: np.ndarray; shape num_samples x num_features; train feature matrix
     :param y: np.ndarray; shape num_samples x 1; multiclass labels
-    :param classifiers: List[np.ndarray; shape num_features x 1; classifier coefficients]
+    :param predict_foo: function handle; takes input samples and returns labels
     :param resolution: tuple(int, int); (nrows, ncols)
     :return:
     """
