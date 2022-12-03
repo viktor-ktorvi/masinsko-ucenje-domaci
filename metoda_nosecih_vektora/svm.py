@@ -54,10 +54,10 @@ def add_support_vector_visualization(current_axis, x, y, clf):
     support_vector_labels = y[clf.sv_bool].squeeze()
 
     support_vector_projection = clf.project(support_vectors)
-    support_vector_slacks = np.zeros((support_vectors.shape[0],))
 
-    nonzero_slack_id = support_vector_labels * support_vector_projection < 1
-    support_vector_slacks[nonzero_slack_id] = np.abs(support_vector_labels[nonzero_slack_id] - support_vector_projection[nonzero_slack_id])
+    support_vector_slacks = np.abs(support_vector_labels - support_vector_projection)
+    support_vector_slacks[np.logical_and(support_vector_labels == 1, support_vector_projection > 1)] = 0
+    support_vector_slacks[np.logical_and(support_vector_labels == -1, support_vector_projection < -1)] = 0
 
     x_min = np.min(x[:, 0])
     x_max = np.max(x[:, 0])
