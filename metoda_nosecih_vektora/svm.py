@@ -3,6 +3,8 @@ import os
 import numpy as np
 
 from cvxopt import matrix, solvers
+from enum import IntEnum
+from scipy.linalg import block_diag
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -15,7 +17,37 @@ from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija
     dataset_area_class_visualization
 
 
-def train(x, y, C):
+class SVMSolverType(IntEnum):
+    Primal = 1
+    Dual = 2
+
+
+def train_primal(x, y, C):
+    num_samples, num_features = x.shape
+    P = block_diag(np.eye(num_features), np.zeros((num_samples + 1, num_samples + 1)))
+    q = np.vstack((np.zeros((num_features + 1, 1)), C * np.ones((num_samples, 1))))
+
+    G1 = np.hstack((-y * x, -y, -np.eye(num_samples)))
+    h1 = -np.ones((num_samples, 1))
+
+    G2 = np.hstack((np.zeros((num_samples, num_features + 1)), -np.eye(num_samples)))
+    h2 = np.zeros((num_samples, 1))
+
+    G = np.vstack((G1, G2))
+    h = np.vstack((h1, h2))
+
+    solution = solvers.qp(matrix(P), matrix(q), matrix(G), matrix(h))
+
+    w = np.array(solution['x'][:num_features]).squeeze()
+    b = np.array(solution['x'][num_features])
+
+    alpha = np.array(solution['z'][:num_samples])
+    sv_bool = alpha > 1e-5
+
+    return w, b, sv_bool.squeeze()
+
+
+def train_dual(x, y, C):
     """
     Solve a quadratic program to obtain the Support Vector Machine weights and bias.
     :param x: np.ndarray; shape num_samples x num_features; feature matrix
@@ -23,14 +55,14 @@ def train(x, y, C):
     :param C: float; soft margin hyperparameter
     :return: tuple; weights, bias, boolean mask for support vectors
     """
-    m, n = x.shape
+    num_samples, num_features = x.shape
     P = matrix((y * x) @ (y * x).T)
-    q = matrix(-np.ones(m))
-    A = matrix(y, (1, m))
+    q = matrix(-np.ones(num_samples))
+    A = matrix(y, (1, num_samples))
     b = matrix(0.0)
 
-    G = matrix(np.vstack((-np.eye(m), np.eye(m))))
-    h = matrix(np.hstack((np.zeros(m), np.ones(m) * C)))
+    G = matrix(np.vstack((-np.eye(num_samples), np.eye(num_samples))))
+    h = matrix(np.hstack((np.zeros(num_samples), np.ones(num_samples) * C)))
 
     solution = solvers.qp(P, q, G, h, A, b)
 
@@ -115,13 +147,19 @@ def add_support_vector_visualization(current_axis, x, y, support_vector_ids, w, 
     plt.legend(by_label.values(), by_label.keys())
 
 
-def experiment(x, y, C=1.0, test_size=0.2, random_state=None, resolution=(100, 100)):
+def experiment(x, y, C=1.0, svm_solver_type=SVMSolverType.Dual, test_size=0.2, random_state=None, resolution=(100, 100)):
     X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
 
     transforms = Pipeline([('scaler', StandardScaler())])  # normalization
     transforms.fit(X_train)
 
-    w, b, sv_bool = train(transforms.transform(X_train), y_train, C=C)
+    if svm_solver_type == SVMSolverType.Primal:
+        w, b, sv_bool = train_primal(transforms.transform(X_train), y_train, C=C)
+    elif svm_solver_type == SVMSolverType.Dual:
+        w, b, sv_bool = train_dual(transforms.transform(X_train), y_train, C=C)
+    else:
+        raise NotImplementedError("SVMSolverType: ", svm_solver_type, " is not supported.")
+
     dataset_area_class_visualization(transforms.transform(X_train), y_train,
                                      predict_foo=lambda background_points: predict(background_points, w, b),
                                      resolution=resolution)
@@ -131,13 +169,14 @@ def experiment(x, y, C=1.0, test_size=0.2, random_state=None, resolution=(100, 1
 if __name__ == '__main__':
 
     experiment_type = {'blobs': True, 'csv_data': True}
+    svm_solver_type = SVMSolverType.Primal
 
     if experiment_type['blobs']:
         for i in range(10):
             x, y = make_blobs(n_samples=100, centers=2, n_features=2)
             y = np.sign(y - 0.5)[:, np.newaxis]
 
-            experiment(x, y, C=1.0, test_size=0.2, random_state=78962, resolution=(100, 100))
+            experiment(x, y, C=1.0, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100))
 
     if experiment_type['csv_data']:
         __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -145,5 +184,5 @@ if __name__ == '__main__':
 
         x, y = load_data(csv_path)
 
-        experiment(x, y, C=1.0, test_size=0.2, random_state=78962, resolution=(100, 100))
+        experiment(x, y, C=1.0, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100))
     plt.show()
