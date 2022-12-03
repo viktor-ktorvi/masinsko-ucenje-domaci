@@ -1,202 +1,105 @@
-import os
-
 import numpy as np
 
-from scipy.optimize import minimize
+from cvxopt import matrix, solvers
+from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from matplotlib import pyplot as plt
 
-from data_loading.data_loading import load_data
-from generalizovani_linearni_modeli_i_generativni_algoritmi.report_visual import dataset_visualization
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
     dataset_area_class_visualization
 
 
-def linear_inference(x, w, b):
-    """
-    Linear inference.
-    :param x: np.ndarray; shape num_samples x num_features; feature matrix.
-    :param w: np.ndarray; shape num_features x 1; classifier weights
-    :param b: np.ndarray; shape 1 x 1; classifier bias
-    :return: np.ndarray; shape num_samples x 1; float classifier output
-    """
-    return x @ w + b
+def train(x, y, C):
+    m, n = x.shape
+    P = matrix((y * x) @ (y * x).T)
+    q = matrix(np.ones(m) * (-1))
+    A = matrix(y, (1, m))
+    b = matrix(0.0)
+
+    G = matrix(np.vstack((np.diag(np.ones(m) * -1), np.identity(m))))
+    h = matrix(np.hstack((np.zeros(m), np.ones(m) * C)))
+
+    solution = solvers.qp(P, q, G, h, A, b)
+
+    # alfa
+    alfas = np.ravel(solution['x'])
+
+    # support vectors
+    sv_bool = alfas > 1e-5
+    alfas_sv = alfas[sv_bool][:, np.newaxis]
+    sv_x = x[sv_bool]
+    sv_y = y[sv_bool]
+
+    w = np.sum(alfas_sv * sv_y * sv_x, axis=0)
+    b = np.mean(sv_y) - np.mean(sv_x, axis=0) @ w
+
+    return w, b, sv_bool
 
 
-def get_slack_vars(y_true, y_out):
-    """
-    Calculate slack variables. Zero if correctly classified; distance to correct margin otherwise.
-    :param y_true: np.ndarray; shape num_samples x 1; ground truth in {-1, 1}
-    :param y_out: np.ndarray; shape num_samples x 1; classifier output
-    :return: np.ndarray; shape num_samples x 1; slack variables
-    """
-    slack_vars = np.zeros(y_true.shape)
-    id_slack_nonzero = y_true * y_out < 0
-    slack_vars[id_slack_nonzero] = np.abs(y_true[id_slack_nonzero] - y_out[id_slack_nonzero])
-
-    return slack_vars
+def predict(x, w, b):
+    return np.sign(x @ w + b)
 
 
-def lagrangian(y_out, y_true, w, C, slacks, a, mu):
-    """
-    Primal lagrangian.
-    :param y_out: np.ndarray; shape num_samples x 1; classifier output
-    :param y_true: np.ndarray; shape num_samples x 1; ground truth in {-1, 1}
-    :param w: np.ndarray; shape num_features x 1; classifier weights
-    :param C: float; soft margin hyperparameter
-    :param slacks: np.ndarray; shape num_samples x 1; slack vairables
-    :param a: np.ndarray; shape num_samples x 1; svm inequality constraints lagrange multipliers
-    :param mu: np.ndarray; shape num_samples x 1; soft margin inequality constraints lagrange multipliers
-    :return: float; primal lagrangian
-    """
-    return 0.5 * np.sum(w ** 2) + C * np.sum(slacks) - np.sum(a * (y_true * y_out - 1 + slacks)) - np.sum(
-        mu * slacks)
+def add_support_vector_visualization(current_axis, x, y, support_vector_ids, w, b):
+    support_vectors = x[support_vector_ids]
+    support_vector_labels = y[support_vector_ids].squeeze()
 
+    support_vector_projection = support_vectors @ w + b
+    support_vector_slacks = np.zeros((support_vectors.shape[0],))
 
-def extract_solution(solution, id_ranges):
-    """
-    Extract elements from the lagrangian optimization solution vector according to id_ranges
-    :param solution: np.ndarray; shape num_variables x 1; optimization vector
-    :param id_ranges: dict; stores indices of elements of the optimization vector
-    :return: tuple(np.ndarray); elements
-    """
-    slacks = solution[id_ranges['slack_vars'][0]:id_ranges['slack_vars'][1]][:, np.newaxis]
-    a = solution[id_ranges['a'][0]:id_ranges['a'][1]][:, np.newaxis]
-    mu = solution[id_ranges['mu'][0]:id_ranges['mu'][1]][:, np.newaxis]
+    nonzero_slack_id = support_vector_labels * support_vector_projection < 1
+    support_vector_slacks[nonzero_slack_id] = np.abs(support_vector_labels[nonzero_slack_id] - support_vector_projection[nonzero_slack_id])
 
-    return a, mu, slacks
+    x_min = np.min(x[:, 0])
+    x_max = np.max(x[:, 0])
+    y_min = np.min(x[:, 1])
+    y_max = np.max(x[:, 1])
 
+    x_range = x_max - x_min
+    y_range = y_max - y_min
 
-def calc_weights_and_bias(a, y_true, x_train_data):
-    """
-    Apply formula for calculating SVM weights and bias from the lagrange multipliers.
-    :param a: np.ndarray; shape num_samples x 1; svm inequality constraints lagrange multipliers
-    :param y_true: np.ndarray; shape num_samples x 1; ground truth in {-1, 1}
-    :param x_train_data: np.ndarray; shape num_samples x num_features; feature matrix.
-    :return: tuple(np.ndarray); weights and bias
-    """
-    w = np.sum(a * y_true * x_train_data, axis=0)[:, np.newaxis]
+    x_lim = [-0.1 * x_range + x_min, 0.1 * x_range + x_max]
+    y_lim = [-0.1 * y_range + y_min, 0.1 * y_range + y_max]
 
-    at = a * y_true
-    xmTxn = np.einsum('ij, jk->ik', x_train_data, x_train_data.T)
-    b = np.mean(y_true - np.einsum('i, ii->i', at.squeeze(), xmTxn)[:, np.newaxis]).reshape(1, 1)
+    x_linspace = np.linspace(*x_lim, 100)
 
-    return w, b
+    for clss in np.unique(support_vector_labels):
+        current_axis.scatter(*[support_vectors[support_vector_labels == clss, i] for i in range(2)],
+                             facecolor='none',
+                             edgecolor='lime',
+                             linewidths=2,
+                             label='noseći vektori')
 
+        current_axis.plot(x_linspace, (clss - b - w[0] * x_linspace) / w[1], color='black', linestyle=':', label='margine')
 
-def get_weights_and_bias(solution_vector, id_ranges, x_train_data, y_true):
-    """
-    Get weights and bias from the solution vector
-    :param solution_vector: np.ndarray; shape num_variables x 1; optimization vector
-    :param id_ranges: dict; stores indices of elements of the optimization vector
-    :param x_train_data: np.ndarray; shape num_samples x num_features; feature matrix.
-    :param y_true: np.ndarray; shape num_samples x 1; ground truth in {-1, 1}
-    :return: tuple(np.ndarray); weights and bias
-    """
-    a, _, _ = extract_solution(solution_vector, id_ranges)
+    for i in range(len(support_vector_slacks)):
+        current_axis.annotate("{:.3f}".format(support_vector_slacks[i]), (support_vectors[i, 0], support_vectors[i, 1]))
 
-    return calc_weights_and_bias(a, y_true, x_train_data)
+    current_axis.set_xlim(*x_lim)
+    current_axis.set_ylim(*y_lim)
 
-
-def min_fun(optimization_vector, C, x_train_data, y_true, id_ranges):
-    """
-    Function to calculate the lagrangian from the data and optimization vector.
-    :param optimization_vector: np.ndarray; shape num_variables x 1; optimization vector
-    :param C: float; soft margin hyperparameter
-    :param x_train_data: np.ndarray; shape num_samples x num_features; feature matrix.
-    :param y_true: np.ndarray; shape num_samples x 1; ground truth in {-1, 1}
-    :param id_ranges: dict; stores indices of elements of the optimization vector
-    :return: float; lagrangian
-    """
-    a, mu, slacks = extract_solution(optimization_vector, id_ranges)
-
-    w, b = calc_weights_and_bias(a, y_true, x_train_data)
-
-    y_out = linear_inference(x_train_data, w, b)
-
-    return lagrangian(y_out, y_true, w, C, slacks, a, mu)
-
-
-def get_initial_solution(x_train, y_train):
-    """
-    Return the initial solution to the optimization problem.
-    :param x_train: np.ndarray; shape num_samples x num_features; feature matrix.
-    :param y_train: np.ndarray; shape num_samples x 1; ground truth in {-1, 1}
-    :return: tuple(np.ndarray, dict)
-    """
-    a = np.ones((x_train.shape[0], 1))  # margin lagrange multipliers
-    mu = np.ones((x_train.shape[0], 1))  # slack lagrange multipliers
-
-    init_weights, init_bias = calc_weights_and_bias(a, y_train, x_train)
-
-    classifier_out = linear_inference(x_train, init_weights, init_bias)
-
-    slacks = get_slack_vars(y_train, classifier_out)  # soft margin slack variables
-
-    variables = {'slack_vars': slacks, 'a': a, 'mu': mu}
-    index_ranges = {'slack_vars': None, 'a': None, 'mu': None}  # how to index the solution vector
-
-    init_solution = np.empty((0, 1))
-
-    # create init solution vector and remember how to index it
-    for var_key in variables.keys():
-        index_ranges[var_key] = [init_solution.shape[0]]
-        init_solution = np.concatenate((init_solution, variables[var_key]))
-        index_ranges[var_key].append(init_solution.shape[0])
-
-    return init_solution, index_ranges
-
-
-def predict(X, w, b):
-    """
-    Return class predictions.
-    :param X: np.ndarray; shape num_samples x num_features; feature matrix.
-    :param w: np.ndarray; shape num_features x 1; classifier weights
-    :param w: np.ndarray; shape 1 x 1; classifier bias
-    :return: np.ndarray; shape num_samples x 1; predictions in {-1, 1}
-    """
-    return np.sign(linear_inference(X, w, b))
+    # suppress duplicate labels
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys())
 
 
 if __name__ == '__main__':
-    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    csv_path = os.path.join(__location__, 'svmData.csv')
+    for i in range(10):
+        x, y = make_blobs(n_samples=100, centers=2, n_features=2)
+        y = np.sign(y - 0.5)[:, np.newaxis]
 
-    test_size = 0.2
-    random_state = 357862
-    C_hp = 0.1  # soft margin hyperparameter
+        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=48613)
 
-    x, y = load_data(csv_path)
-    theta = 150 / 180 * np.pi  # TODO Probati za vise ovih vrednosti ili napraviti fejk podatke. Probati i sa nekom vecom tolerancijom u solveru
-    R = np.array([[np.cos(theta), -np.sin(theta)],
-                  [np.sin(theta), np.cos(theta)]])
+        transforms = Pipeline([('scaler', StandardScaler())])  # normalization
+        transforms.fit(X_train)
 
-    x = x @ R
-
-    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
-
-    pipe = Pipeline([('scaler', StandardScaler())])  # normalization
-    pipe.fit(X_train)
-
-    X_train_transformed = pipe.transform(X_train)
-
-    # dataset_visualization(pipe.transform(X_train_transformed), y_train)
-
-    initial_solution, index_ranges = get_initial_solution(X_train_transformed, y_train)
-
-    solution_obj = minimize(
-        fun=lambda x_var: min_fun(x_var, C=C_hp, x_train_data=X_train_transformed, y_true=y_train,
-                                  id_ranges=index_ranges),
-        x0=initial_solution.squeeze())
-    print('success' if solution_obj.success else 'no success')
-    weights, bias = get_weights_and_bias(solution_obj.x, index_ranges, X_train_transformed, y_train)
-
-    dataset_area_class_visualization(X_train_transformed, y_train,
-                                     predict_foo=lambda background_points: predict(background_points, weights, bias),
-                                     resolution=(50, 50))
+        w, b, sv_bool = train(transforms.transform(X_train), y_train, C=1.0)
+        dataset_area_class_visualization(transforms.transform(X_train), y_train,
+                                         predict_foo=lambda background_points: predict(background_points, w, b),
+                                         resolution=(100, 100))
+        add_support_vector_visualization(plt.gca(), transforms.transform(X_train), y_train, sv_bool, w, b)
     plt.show()
-
-    kjkszpj = None
