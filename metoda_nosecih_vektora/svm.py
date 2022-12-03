@@ -18,6 +18,11 @@ from matplotlib import pyplot as plt
 from data_loading.data_loading import load_data
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
     dataset_area_class_visualization
+
+from metoda_nosecih_vektora.dual import SVMDual
+from metoda_nosecih_vektora.primal import SVMPrimal
+
+from utils.utils import cross_norm_sqrd
 from utils.validation import hyperparameter_search
 
 
@@ -26,83 +31,15 @@ class SVMSolverType(IntEnum):
     Dual = 2
 
 
-def train_primal(x, y, C):
+def radial_basis_kernel(x1, x2, sigma):
     """
-    Solve a quadratic program in primal from to obtain the Support Vector Machine weights and bias.
-    :param x: np.ndarray; shape num_samples x num_features; feature matrix
-    :param y: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
-    :param C: float; soft margin hyperparameter
-    :return: tuple; weights, bias, boolean mask for support vectors
+    Return a radial basis kernel(Gaussian) matrix for the given samples.
+    :param x1: np.ndarray; shape N x num_features
+    :param x2: np.ndarray; shape M x num_features
+    :param sigma: float; standard deviation of the Gaussian function
+    :return: np.ndarray; shape M x N; rdb/Gaussian kernel
     """
-    num_samples, num_features = x.shape
-    P = block_diag(np.eye(num_features), np.zeros((num_samples + 1, num_samples + 1)))
-    q = np.vstack((np.zeros((num_features + 1, 1)), C * np.ones((num_samples, 1))))
-
-    G1 = np.hstack((-y * x, -y, -np.eye(num_samples)))
-    h1 = -np.ones((num_samples, 1))
-
-    G2 = np.hstack((np.zeros((num_samples, num_features + 1)), -np.eye(num_samples)))
-    h2 = np.zeros((num_samples, 1))
-
-    G = np.vstack((G1, G2))
-    h = np.vstack((h1, h2))
-
-    solvers.options['show_progress'] = False
-    solution = solvers.qp(matrix(P), matrix(q), matrix(G), matrix(h))
-
-    w = np.array(solution['x'][:num_features]).squeeze()
-    b = np.array(solution['x'][num_features])
-
-    alpha = np.array(solution['z'][:num_samples])
-    sv_bool = alpha > 1e-5
-
-    return w, b, sv_bool.squeeze()
-
-
-def train_dual(x, y, C):
-    """
-    Solve a quadratic program in dual from to obtain the Support Vector Machine weights and bias.
-    :param x: np.ndarray; shape num_samples x num_features; feature matrix
-    :param y: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
-    :param C: float; soft margin hyperparameter
-    :return: tuple; weights, bias, boolean mask for support vectors
-    """
-    num_samples, num_features = x.shape
-    P = (y * x) @ (y * x).T
-    q = -np.ones((num_samples, 1))
-    A = y.reshape(1, num_samples)
-    b = 0.0
-
-    G = np.vstack((-np.eye(num_samples), np.eye(num_samples)))
-    h = np.hstack((np.zeros(num_samples), np.ones(num_samples) * C))
-
-    solvers.options['show_progress'] = False
-    solution = solvers.qp(matrix(P), matrix(q), matrix(G), matrix(h), matrix(A), matrix(b))
-
-    # alfa
-    alpha = np.array(solution['x'])
-
-    # support vectors
-    sv_bool = (alpha > 1e-5).squeeze()
-    alpha_sv = alpha[sv_bool]
-    sv_x = x[sv_bool]
-    sv_y = y[sv_bool]
-
-    weights = np.sum(alpha_sv * sv_y * sv_x, axis=0)
-    bias = np.mean(sv_y) - np.mean(sv_x, axis=0) @ weights
-
-    return weights, bias, sv_bool
-
-
-def predict(x, w, b):
-    """
-    Predict the classes of samples using an SVM classifier.
-    :param x: np.ndarray; shape num_samples x num_features; feature matrix
-    :param w: np.ndarray; shape num_features x 1; SVM weights
-    :param b: np.ndarray; shape 1 x 1; SVM bias
-    :return: np.ndarray; class predictions in {-1, 1}
-    """
-    return np.sign(x @ w + b)
+    return np.exp(-0.5 * cross_norm_sqrd(x1, x2) / sigma)
 
 
 def add_support_vector_visualization(current_axis, x, y, support_vector_ids, w, b):
@@ -166,45 +103,48 @@ def add_test_data_visualization(current_axis, x, y):
                              label='test klasa {:d}'.format(int(clss)))
 
 
-def experiment(x, y, C=1.0, svm_solver_type=SVMSolverType.Dual, test_size=0.2, random_state=None, resolution=(100, 100)):
+def experiment(x, y, C=1.0, svm_solver_type=SVMSolverType.Dual, test_size=0.2, random_state=None, resolution=(100, 100), sigma=1.0):
     X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
 
     transforms = Pipeline([('scaler', StandardScaler())])  # normalization
     transforms.fit(X_train)
 
     if svm_solver_type == SVMSolverType.Primal:
-        w, b, sv_bool = train_primal(transforms.transform(X_train), y_train, C=C)
+        clf = SVMPrimal(transforms.transform(X_train), y_train, C)
+
     elif svm_solver_type == SVMSolverType.Dual:
-        w, b, sv_bool = train_dual(transforms.transform(X_train), y_train, C=C)
+        clf = SVMDual(transforms.transform(X_train), y_train, C, kernel_foo=lambda x1, x2: radial_basis_kernel(x1, x2, sigma=sigma))
+
     else:
         raise NotImplementedError("SVMSolverType: ", svm_solver_type, " is not supported.")
 
-    print('Test accuracy = {:2.2f}'.format(accuracy_score(y_test, predict(transforms.transform(X_test), w, b))))
+    print('Test accuracy = {:2.2f}'.format(accuracy_score(y_test, clf.predict(transforms.transform(X_test)))))
 
     dataset_area_class_visualization(transforms.transform(X_train), y_train,
-                                     predict_foo=lambda background_points: predict(background_points, w, b),
+                                     predict_foo=lambda background_points: clf.predict(background_points),
                                      resolution=resolution)
     # add_test_data_visualization(plt.gca(), transforms.transform(X_test), y_test)
 
-    add_support_vector_visualization(plt.gca(), transforms.transform(X_train), y_train, sv_bool, w, b)
+    if svm_solver_type == SVMSolverType.Primal:
+        add_support_vector_visualization(plt.gca(), transforms.transform(X_train), y_train, clf.sv_bool, clf.w, clf.b)
 
 
-def train_and_predict(x_train, y_train, x_test, train_svm_foo, C=1.0):
-    """
-    Normalize data and train SVM.
-    :param x_train: np.ndarray; shape num_samples x num_features; dataset feature matrix
-    :param y_train: np.ndarray; shape num_samples x 1; dataset output vector
-    :param x_test:  np.ndarray; shape num_test_samples x num_features; test set feature matrix
-    :param train_svm_foo: function handle; function to train SVM
-    :param C: float; soft margin SVM hyperparameter
-    :return: tuple; weights and bias
-    """
-    transforms = Pipeline([('scaler', StandardScaler())])  # normalization
-    transforms.fit(x_train)
-
-    w, b, _ = train_svm_foo(transforms.transform(x_train), y_train, C=C)
-
-    return predict(transforms.transform(x_test), w, b)
+# def train_and_predict(x_train, y_train, x_test, train_svm_foo, C=1.0):
+#     """
+#     Normalize data and train SVM.
+#     :param x_train: np.ndarray; shape num_samples x num_features; dataset feature matrix
+#     :param y_train: np.ndarray; shape num_samples x 1; dataset output vector
+#     :param x_test:  np.ndarray; shape num_test_samples x num_features; test set feature matrix
+#     :param train_svm_foo: function handle; function to train SVM
+#     :param C: float; soft margin SVM hyperparameter
+#     :return: tuple; weights and bias
+#     """
+#     transforms = Pipeline([('scaler', StandardScaler())])  # normalization
+#     transforms.fit(x_train)
+#
+#     w, b, _ = train_svm_foo(transforms.transform(x_train), y_train, C=C)
+#
+#     return predict_linear(transforms.transform(x_test), w, b)
 
 
 if __name__ == '__main__':
@@ -236,19 +176,19 @@ if __name__ == '__main__':
 
         x, y = load_data(csv_path)
 
-        experiment(x, y, C=1.0, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100))
+        experiment(x, y, C=1.0, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100), sigma=0.1)
 
-        if svm_solver_type == SVMSolverType.Primal:
-            train_svm_foo = train_primal
-        elif svm_solver_type == SVMSolverType.Dual:
-            train_svm_foo = train_dual
-        else:
-            raise NotImplementedError("SVMSolverType: ", svm_solver_type, " is not supported.")
-
-        hyperparameter_search(x, y, start=-4, stop=2,
-                              train_and_predict_foo=lambda x_train, y_train, x_test, C: train_and_predict(x_train, y_train, x_test,
-                                                                                                          train_svm_foo, C),
-                              metric_foo=accuracy_score, num=20, k_splits=5, n_repeats=2, confidence=0.95,
-                              xlabel='C', ylabel='preciznost')
+        # if svm_solver_type == SVMSolverType.Primal:
+        #     train_svm_foo = train_primal
+        # elif svm_solver_type == SVMSolverType.Dual:
+        #     train_svm_foo = train_dual
+        # else:
+        #     raise NotImplementedError("SVMSolverType: ", svm_solver_type, " is not supported.")
+        #
+        # hyperparameter_search(x, y, start=-4, stop=2,
+        #                       train_and_predict_foo=lambda x_train, y_train, x_test, C: train_and_predict(x_train, y_train, x_test,
+        #                                                                                                   train_svm_foo, C),
+        #                       metric_foo=accuracy_score, num=20, k_splits=5, n_repeats=2, confidence=0.95,
+        #                       xlabel='C', ylabel='preciznost')
 
     plt.show()
