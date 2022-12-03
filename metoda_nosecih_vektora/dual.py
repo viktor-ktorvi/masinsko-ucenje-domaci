@@ -1,25 +1,6 @@
-import argparse
-import os
-
 import numpy as np
 
 from cvxopt import matrix, solvers
-from enum import IntEnum
-from scipy.linalg import block_diag
-
-from sklearn.datasets import make_blobs
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-
-from matplotlib import pyplot as plt
-
-from data_loading.data_loading import load_data
-from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
-    dataset_area_class_visualization
-from utils.utils import cross_norm_sqrd
-from utils.validation import hyperparameter_search
 
 
 class SVMDual:
