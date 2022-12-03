@@ -94,7 +94,7 @@ def hyperparameter_search(x, y, start, stop, train_and_predict_foo, metric_foo, 
     :param confidence: float; [0.0-1.0]; confidence interval to display
     :param xlabel: str; x label for plot
     :param ylabel: str; y label for plot
-    :return:
+    :return: np.ndarray; metrics
     """
     metrics = np.zeros((num, k_splits * n_repeats), dtype=np.float32)
     conf_interval = np.zeros((num, 2), dtype=np.float32)
@@ -124,3 +124,5 @@ def hyperparameter_search(x, y, start, stop, train_and_predict_foo, metric_foo, 
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.legend()
+
+    return metrics
