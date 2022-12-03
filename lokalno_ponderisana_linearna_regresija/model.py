@@ -7,7 +7,8 @@ from tqdm import tqdm
 from sklearn.metrics import mean_squared_error
 
 from data_loading.data_loading import load_data, add_bias
-from utils.utils import cross_norm_sqrd, RepeatedKFold
+from utils.utils import cross_norm_sqrd
+from utils.validation import RepeatedKFold
 
 
 def get_weights(x_test, x_train, tau):

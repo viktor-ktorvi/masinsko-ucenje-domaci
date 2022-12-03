@@ -2,7 +2,6 @@ import argparse
 import os
 
 import numpy as np
-import scipy.stats as st
 
 from cvxopt import matrix, solvers
 from enum import IntEnum
@@ -14,14 +13,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from tqdm import tqdm
-
 from matplotlib import pyplot as plt
 
 from data_loading.data_loading import load_data
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
     dataset_area_class_visualization
-from utils.utils import RepeatedKFold
+from utils.validation import hyperparameter_search
 
 
 class SVMSolverType(IntEnum):
@@ -208,84 +205,6 @@ def train_and_predict(x_train, y_train, x_test, train_svm_foo, C=1.0):
     w, b, _ = train_svm_foo(transforms.transform(x_train), y_train, C=C)
 
     return predict(transforms.transform(x_test), w, b)
-
-
-def repeated_k_fold(x, y, train_and_predict_foo, metric_foo, n_splits=2, n_repeats=2, random_state=984613):
-    """
-    Do k-fold cross validation multiple times and return an error array for every model trained.
-
-    :param x: np.ndarray; shape num_samples x num_features; dataset feature matrix
-    :param y: np.ndarray; shape num_samples x 1; dataset output vector
-    :param train_and_predict_foo:
-    :param metric_foo:
-    :param n_splits: int; k in k-fold
-    :param n_repeats: int; number of times to do k-fold cross validation
-    :param random_state: int; random seed
-    :return: metric matrix; np.ndarray; shape (n_splits * n_repeats) x 1
-    """
-    rkf = RepeatedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
-
-    metric = np.zeros((n_splits * n_repeats,), dtype=np.float32)
-
-    for i, indices in enumerate(rkf.split(x)):
-        train_index, test_index = indices
-        x_train, x_test = x[train_index], x[test_index]
-        y_train, y_test = y[train_index], y[test_index]
-
-        y_pred = train_and_predict_foo(x_train, y_train, x_test)
-
-        metric[i] = metric_foo(y_test, y_pred)
-
-    return metric
-
-
-def hyperparameter_search(x, y, start, stop, train_and_predict_foo, metric_foo, num=1, k_splits=2, n_repeats=1, confidence=0.95,
-                          xlabel='hyperparameter', ylabel='metric'):
-    """
-    Log(base 10) scale hyperparameter grid search.
-
-    :param x: np.ndarray; shape num_samples x num_features; dataset feature matrix
-    :param y: np.ndarray; shape num_samples x 1; dataset output vector
-    :param start: float; exponent of the start of the interval
-    :param stop: float; exponent of the end of the interval
-    :param train_and_predict_foo:
-    :param metric_foo:
-    :param num: int; number of points to search
-    :param k_splits: int; k in k-folds cross validation
-    :param n_repeats: int; number of times to repeat k-folds
-    :param confidence: float; [0.0-1.0]; confidence interval to display
-    :param xlabel: str; x label for plot
-    :param ylabel: str; y label for plot
-    :return:
-    """
-    metrics = np.zeros((num, k_splits * n_repeats), dtype=np.float32)
-    conf_interval = np.zeros((num, 2), dtype=np.float32)
-    hyperparameter_range = np.logspace(start=start, stop=stop, num=num)
-
-    for i in tqdm(range(len(hyperparameter_range))):
-        metrics[i, :] = repeated_k_fold(x, y,
-                                        train_and_predict_foo=lambda x_train, y_train, x_test: train_and_predict_foo(x_train, y_train,
-                                                                                                                     x_test,
-                                                                                                                     hyperparameter_range[
-                                                                                                                         i]),
-                                        metric_foo=metric_foo,
-                                        n_splits=k_splits,
-                                        n_repeats=n_repeats)
-
-        conf_interval[i, :] = st.t.interval(confidence=confidence, df=len(metrics[i, :]) - 1,
-                                            loc=np.mean(metrics[i, :]),
-                                            scale=st.sem(metrics[i, :]))
-
-    plt.figure()
-    plt.fill_between(hyperparameter_range, conf_interval[:, 0], conf_interval[:, 1], color='paleturquoise', alpha=0.6,
-                     label='interval poverenja {:d} %'.format(round(confidence * 100)))
-    plt.plot(hyperparameter_range, np.mean(metrics, axis=1), '--^',
-             label='srednja vrednost k ={:2d}\nvalidacionih podskupova'.format(k_splits))
-    plt.grid(True, which="both", ls=":")
-    plt.xscale('log')
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.legend()
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
-import itertools
 import numpy as np
+
+from utils.validation import RepeatedKFold
 
 
 def cross_norm_sqrd(x_train, x_test):
@@ -50,48 +51,6 @@ def sigmoid(x):
     :return: np.ndarray; shape of x
     """
     return 1 / (1 + np.exp(-x))
-
-
-class RepeatedKFold:
-    """
-    A class implementing part of sklearn.model_selection.RepeatedKFold's interface. Generates indices for k-fold cross
-    validation repeated n times with different splits.
-    """
-
-    def __init__(self, n_splits=2, n_repeats=1, random_state=321653):
-        """
-
-        :param n_splits: int; k in k-fold
-        :param n_repeats: int; number of times to do k-fold
-        :param random_state: int; random seed
-        """
-        self.n_splits = n_splits
-        self.n_repeats = n_repeats
-
-        self.rng = np.random.default_rng(random_state)
-
-    def split(self, x):
-        """
-        Generate folds for the training set x.
-        :param x: np.ndarray; shape num_samples x num_features; dataset matrix
-        :return: list[tuple(np.ndarray)]; a list of the train and test indices for every repeated split
-        """
-        validation_indices = []
-
-        for i in range(self.n_repeats):
-            indices = np.arange(x.shape[0])
-            self.rng.shuffle(indices)
-            folds = np.array_split(indices, self.n_splits)
-
-            # get all n choose n - 1 combinations
-            combinations = list(itertools.combinations(folds, self.n_splits - 1))
-
-            for comb in combinations:
-                train_idx = np.concatenate(comb)
-                test_idx = np.setdiff1d(indices, train_idx, assume_unique=True)
-                validation_indices.append((train_idx, test_idx))
-
-        return validation_indices
 
 
 class DataLoader:
