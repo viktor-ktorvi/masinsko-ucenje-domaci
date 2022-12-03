@@ -2,20 +2,26 @@ import argparse
 import os
 
 import numpy as np
+import scipy.stats as st
 
 from cvxopt import matrix, solvers
 from enum import IntEnum
 from scipy.linalg import block_diag
+
 from sklearn.datasets import make_blobs
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+
+from tqdm import tqdm
 
 from matplotlib import pyplot as plt
 
 from data_loading.data_loading import load_data
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
     dataset_area_class_visualization
+from utils.utils import RepeatedKFold
 
 
 class SVMSolverType(IntEnum):
@@ -44,6 +50,7 @@ def train_primal(x, y, C):
     G = np.vstack((G1, G2))
     h = np.vstack((h1, h2))
 
+    solvers.options['show_progress'] = False
     solution = solvers.qp(matrix(P), matrix(q), matrix(G), matrix(h))
 
     w = np.array(solution['x'][:num_features]).squeeze()
@@ -72,6 +79,7 @@ def train_dual(x, y, C):
     G = np.vstack((-np.eye(num_samples), np.eye(num_samples)))
     h = np.hstack((np.zeros(num_samples), np.ones(num_samples) * C))
 
+    solvers.options['show_progress'] = False
     solution = solvers.qp(matrix(P), matrix(q), matrix(G), matrix(h), matrix(A), matrix(b))
 
     # alfa
@@ -144,7 +152,7 @@ def add_support_vector_visualization(current_axis, x, y, support_vector_ids, w, 
         current_axis.plot(x_linspace, (clss - b - w[0] * x_linspace) / w[1], color='black', linestyle=':', label='margine')
 
     for i in range(len(support_vector_slacks)):
-        current_axis.annotate("{:.3f}".format(support_vector_slacks[i]), (support_vectors[i, 0], support_vectors[i, 1]))
+        current_axis.annotate("{:.2f}".format(support_vector_slacks[i]), (support_vectors[i, 0], support_vectors[i, 1]))
 
     current_axis.set_xlim(*x_lim)
     current_axis.set_ylim(*y_lim)
@@ -153,6 +161,12 @@ def add_support_vector_visualization(current_axis, x, y, support_vector_ids, w, 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys())
+
+
+def add_test_data_visualization(current_axis, x, y):
+    for clss in np.unique(np.unique(y)):
+        current_axis.scatter(*[x[y.squeeze() == clss, i] for i in range(2)], marker='x', s=100, linewidths=2,
+                             label='test klasa {:d}'.format(int(clss)))
 
 
 def experiment(x, y, C=1.0, svm_solver_type=SVMSolverType.Dual, test_size=0.2, random_state=None, resolution=(100, 100)):
@@ -168,10 +182,110 @@ def experiment(x, y, C=1.0, svm_solver_type=SVMSolverType.Dual, test_size=0.2, r
     else:
         raise NotImplementedError("SVMSolverType: ", svm_solver_type, " is not supported.")
 
+    print('Test accuracy = {:2.2f}'.format(accuracy_score(y_test, predict(transforms.transform(X_test), w, b))))
+
     dataset_area_class_visualization(transforms.transform(X_train), y_train,
                                      predict_foo=lambda background_points: predict(background_points, w, b),
                                      resolution=resolution)
+    # add_test_data_visualization(plt.gca(), transforms.transform(X_test), y_test)
+
     add_support_vector_visualization(plt.gca(), transforms.transform(X_train), y_train, sv_bool, w, b)
+
+
+def train_and_predict(x_train, y_train, x_test, train_svm_foo, C=1.0):
+    """
+    Normalize data and train SVM.
+    :param x_train: np.ndarray; shape num_samples x num_features; dataset feature matrix
+    :param y_train: np.ndarray; shape num_samples x 1; dataset output vector
+    :param x_test:  np.ndarray; shape num_test_samples x num_features; test set feature matrix
+    :param train_svm_foo: function handle; function to train SVM
+    :param C: float; soft margin SVM hyperparameter
+    :return: tuple; weights and bias
+    """
+    transforms = Pipeline([('scaler', StandardScaler())])  # normalization
+    transforms.fit(x_train)
+
+    w, b, _ = train_svm_foo(transforms.transform(x_train), y_train, C=C)
+
+    return predict(transforms.transform(x_test), w, b)
+
+
+def repeated_k_fold(x, y, train_and_predict_foo, metric_foo, n_splits=2, n_repeats=2, random_state=984613):
+    """
+    Do k-fold cross validation multiple times and return an error array for every model trained.
+
+    :param x: np.ndarray; shape num_samples x num_features; dataset feature matrix
+    :param y: np.ndarray; shape num_samples x 1; dataset output vector
+    :param train_and_predict_foo:
+    :param metric_foo:
+    :param n_splits: int; k in k-fold
+    :param n_repeats: int; number of times to do k-fold cross validation
+    :param random_state: int; random seed
+    :return: metric matrix; np.ndarray; shape (n_splits * n_repeats) x 1
+    """
+    rkf = RepeatedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
+
+    metric = np.zeros((n_splits * n_repeats,), dtype=np.float32)
+
+    for i, indices in enumerate(rkf.split(x)):
+        train_index, test_index = indices
+        x_train, x_test = x[train_index], x[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        y_pred = train_and_predict_foo(x_train, y_train, x_test)
+
+        metric[i] = metric_foo(y_test, y_pred)
+
+    return metric
+
+
+def hyperparameter_search(x, y, start, stop, train_and_predict_foo, metric_foo, num=1, k_splits=2, n_repeats=1, confidence=0.95,
+                          xlabel='hyperparameter', ylabel='metric'):
+    """
+    Log(base 10) scale hyperparameter grid search.
+
+    :param x: np.ndarray; shape num_samples x num_features; dataset feature matrix
+    :param y: np.ndarray; shape num_samples x 1; dataset output vector
+    :param start: float; exponent of the start of the interval
+    :param stop: float; exponent of the end of the interval
+    :param train_and_predict_foo:
+    :param metric_foo:
+    :param num: int; number of points to search
+    :param k_splits: int; k in k-folds cross validation
+    :param n_repeats: int; number of times to repeat k-folds
+    :param confidence: float; [0.0-1.0]; confidence interval to display
+    :param xlabel: str; x label for plot
+    :param ylabel: str; y label for plot
+    :return:
+    """
+    metrics = np.zeros((num, k_splits * n_repeats), dtype=np.float32)
+    conf_interval = np.zeros((num, 2), dtype=np.float32)
+    hyperparameter_range = np.logspace(start=start, stop=stop, num=num)
+
+    for i in tqdm(range(len(hyperparameter_range))):
+        metrics[i, :] = repeated_k_fold(x, y,
+                                        train_and_predict_foo=lambda x_train, y_train, x_test: train_and_predict_foo(x_train, y_train,
+                                                                                                                     x_test,
+                                                                                                                     hyperparameter_range[
+                                                                                                                         i]),
+                                        metric_foo=metric_foo,
+                                        n_splits=k_splits,
+                                        n_repeats=n_repeats)
+
+        conf_interval[i, :] = st.t.interval(confidence=confidence, df=len(metrics[i, :]) - 1,
+                                            loc=np.mean(metrics[i, :]),
+                                            scale=st.sem(metrics[i, :]))
+
+    plt.figure()
+    plt.fill_between(hyperparameter_range, conf_interval[:, 0], conf_interval[:, 1], color='paleturquoise', alpha=0.6,
+                     label='interval poverenja {:d} %'.format(round(confidence * 100)))
+    plt.plot(hyperparameter_range, np.mean(metrics, axis=1), '--^',
+             label='srednja vrednost k ={:2d}\nvalidacionih podskupova'.format(k_splits))
+    plt.grid(True, which="both", ls=":")
+    plt.xscale('log')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
 
 
 if __name__ == '__main__':
@@ -204,4 +318,18 @@ if __name__ == '__main__':
         x, y = load_data(csv_path)
 
         experiment(x, y, C=1.0, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100))
+
+        if svm_solver_type == SVMSolverType.Primal:
+            train_svm_foo = train_primal
+        elif svm_solver_type == SVMSolverType.Dual:
+            train_svm_foo = train_dual
+        else:
+            raise NotImplementedError("SVMSolverType: ", svm_solver_type, " is not supported.")
+
+        hyperparameter_search(x, y, start=-4, stop=2,
+                              train_and_predict_foo=lambda x_train, y_train, x_test, C: train_and_predict(x_train, y_train, x_test,
+                                                                                                          train_svm_foo, C),
+                              metric_foo=accuracy_score, num=20, k_splits=5, n_repeats=2, confidence=0.95,
+                              xlabel='C', ylabel='preciznost')
+
     plt.show()
