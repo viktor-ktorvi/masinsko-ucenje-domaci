@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 from cvxopt import matrix, solvers
@@ -8,18 +10,26 @@ from sklearn.preprocessing import StandardScaler
 
 from matplotlib import pyplot as plt
 
+from data_loading.data_loading import load_data
 from generalizovani_linearni_modeli_i_generativni_algoritmi.logisticka_regresija.visualization import \
     dataset_area_class_visualization
 
 
 def train(x, y, C):
+    """
+    Solve a quadratic program to obtain the Support Vector Machine weights and bias.
+    :param x: np.ndarray; shape num_samples x num_features; feature matrix
+    :param y: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
+    :param C: float; soft margin hyperparameter
+    :return: tuple; weights, bias, boolean mask for support vectors
+    """
     m, n = x.shape
     P = matrix((y * x) @ (y * x).T)
-    q = matrix(np.ones(m) * (-1))
+    q = matrix(-np.ones(m))
     A = matrix(y, (1, m))
     b = matrix(0.0)
 
-    G = matrix(np.vstack((np.diag(np.ones(m) * -1), np.identity(m))))
+    G = matrix(np.vstack((-np.eye(m), np.eye(m))))
     h = matrix(np.hstack((np.zeros(m), np.ones(m) * C)))
 
     solution = solvers.qp(P, q, G, h, A, b)
@@ -40,10 +50,28 @@ def train(x, y, C):
 
 
 def predict(x, w, b):
+    """
+    Predict the classes of samples using an SVM classifier.
+    :param x: np.ndarray; shape num_samples x num_features; feature matrix
+    :param w: np.ndarray; shape num_features x 1; SVM weights
+    :param b: np.ndarray; shape 1 x 1; SVM bias
+    :return: np.ndarray; class predictions in {-1, 1}
+    """
     return np.sign(x @ w + b)
 
 
 def add_support_vector_visualization(current_axis, x, y, support_vector_ids, w, b):
+    """
+    Highlight support vectors, draw margins and annotate slack variable values.
+
+    :param current_axis: axis object
+    :param x: np.ndarray; shape num_samples x num_features; feature matrix
+    :param y: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
+    :param support_vector_ids: np.ndarray; shape num_samples x 1; boolean mask for support vectors
+    :param w: np.ndarray; shape num_features x 1; SVM weights
+    :param b: np.ndarray; shape 1 x 1; SVM bias
+    :return:
+    """
     support_vectors = x[support_vector_ids]
     support_vector_labels = y[support_vector_ids].squeeze()
 
@@ -87,19 +115,35 @@ def add_support_vector_visualization(current_axis, x, y, support_vector_ids, w, 
     plt.legend(by_label.values(), by_label.keys())
 
 
+def experiment(x, y, C=1.0, test_size=0.2, random_state=None, resolution=(100, 100)):
+    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
+
+    transforms = Pipeline([('scaler', StandardScaler())])  # normalization
+    transforms.fit(X_train)
+
+    w, b, sv_bool = train(transforms.transform(X_train), y_train, C=C)
+    dataset_area_class_visualization(transforms.transform(X_train), y_train,
+                                     predict_foo=lambda background_points: predict(background_points, w, b),
+                                     resolution=resolution)
+    add_support_vector_visualization(plt.gca(), transforms.transform(X_train), y_train, sv_bool, w, b)
+
+
 if __name__ == '__main__':
-    for i in range(10):
-        x, y = make_blobs(n_samples=100, centers=2, n_features=2)
-        y = np.sign(y - 0.5)[:, np.newaxis]
 
-        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=48613)
+    experiment_type = {'blobs': True, 'csv_data': True}
 
-        transforms = Pipeline([('scaler', StandardScaler())])  # normalization
-        transforms.fit(X_train)
+    if experiment_type['blobs']:
+        for i in range(10):
+            x, y = make_blobs(n_samples=100, centers=2, n_features=2)
+            y = np.sign(y - 0.5)[:, np.newaxis]
 
-        w, b, sv_bool = train(transforms.transform(X_train), y_train, C=1.0)
-        dataset_area_class_visualization(transforms.transform(X_train), y_train,
-                                         predict_foo=lambda background_points: predict(background_points, w, b),
-                                         resolution=(100, 100))
-        add_support_vector_visualization(plt.gca(), transforms.transform(X_train), y_train, sv_bool, w, b)
+            experiment(x, y, C=1.0, test_size=0.2, random_state=78962, resolution=(100, 100))
+
+    if experiment_type['csv_data']:
+        __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        csv_path = os.path.join(__location__, 'svmData.csv')
+
+        x, y = load_data(csv_path)
+
+        experiment(x, y, C=1.0, test_size=0.2, random_state=78962, resolution=(100, 100))
     plt.show()
