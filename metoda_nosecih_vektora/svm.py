@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import numpy as np
@@ -23,6 +24,13 @@ class SVMSolverType(IntEnum):
 
 
 def train_primal(x, y, C):
+    """
+    Solve a quadratic program in primal from to obtain the Support Vector Machine weights and bias.
+    :param x: np.ndarray; shape num_samples x num_features; feature matrix
+    :param y: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
+    :param C: float; soft margin hyperparameter
+    :return: tuple; weights, bias, boolean mask for support vectors
+    """
     num_samples, num_features = x.shape
     P = block_diag(np.eye(num_features), np.zeros((num_samples + 1, num_samples + 1)))
     q = np.vstack((np.zeros((num_features + 1, 1)), C * np.ones((num_samples, 1))))
@@ -49,36 +57,36 @@ def train_primal(x, y, C):
 
 def train_dual(x, y, C):
     """
-    Solve a quadratic program to obtain the Support Vector Machine weights and bias.
+    Solve a quadratic program in dual from to obtain the Support Vector Machine weights and bias.
     :param x: np.ndarray; shape num_samples x num_features; feature matrix
     :param y: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
     :param C: float; soft margin hyperparameter
     :return: tuple; weights, bias, boolean mask for support vectors
     """
     num_samples, num_features = x.shape
-    P = matrix((y * x) @ (y * x).T)
-    q = matrix(-np.ones(num_samples))
-    A = matrix(y, (1, num_samples))
-    b = matrix(0.0)
+    P = (y * x) @ (y * x).T
+    q = -np.ones((num_samples, 1))
+    A = y.reshape(1, num_samples)
+    b = 0.0
 
-    G = matrix(np.vstack((-np.eye(num_samples), np.eye(num_samples))))
-    h = matrix(np.hstack((np.zeros(num_samples), np.ones(num_samples) * C)))
+    G = np.vstack((-np.eye(num_samples), np.eye(num_samples)))
+    h = np.hstack((np.zeros(num_samples), np.ones(num_samples) * C))
 
-    solution = solvers.qp(P, q, G, h, A, b)
+    solution = solvers.qp(matrix(P), matrix(q), matrix(G), matrix(h), matrix(A), matrix(b))
 
     # alfa
-    alfas = np.ravel(solution['x'])
+    alpha = np.array(solution['x'])
 
     # support vectors
-    sv_bool = alfas > 1e-5
-    alfas_sv = alfas[sv_bool][:, np.newaxis]
+    sv_bool = (alpha > 1e-5).squeeze()
+    alpha_sv = alpha[sv_bool]
     sv_x = x[sv_bool]
     sv_y = y[sv_bool]
 
-    w = np.sum(alfas_sv * sv_y * sv_x, axis=0)
-    b = np.mean(sv_y) - np.mean(sv_x, axis=0) @ w
+    weights = np.sum(alpha_sv * sv_y * sv_x, axis=0)
+    bias = np.mean(sv_y) - np.mean(sv_x, axis=0) @ weights
 
-    return w, b, sv_bool
+    return weights, bias, sv_bool
 
 
 def predict(x, w, b):
@@ -167,18 +175,29 @@ def experiment(x, y, C=1.0, svm_solver_type=SVMSolverType.Dual, test_size=0.2, r
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--blobs', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--csv_data', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--svm_solver_type', type=str, required=True)
 
-    experiment_type = {'blobs': True, 'csv_data': True}
-    svm_solver_type = SVMSolverType.Primal
+    args = parser.parse_args()
+    print("Passed Arguments:\n", args)
 
-    if experiment_type['blobs']:
+    if args.svm_solver_type.lower() == 'primal':
+        svm_solver_type = SVMSolverType.Primal
+    elif args.svm_solver_type.lower() == 'dual':
+        svm_solver_type = SVMSolverType.Dual
+    else:
+        raise ValueError("SVMSolverType '{:s}' is not supported.".format(args.svm_solver_type))
+
+    if args.blobs:  # artificial dataset blobs
         for i in range(10):
             x, y = make_blobs(n_samples=100, centers=2, n_features=2)
-            y = np.sign(y - 0.5)[:, np.newaxis]
+            y = np.sign(y - 0.5)[:, np.newaxis]  # {-1, 1}
 
             experiment(x, y, C=1.0, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100))
 
-    if experiment_type['csv_data']:
+    if args.csv_data:  # tabular data from memory
         __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
         csv_path = os.path.join(__location__, 'svmData.csv')
 
