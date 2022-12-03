@@ -3,9 +3,7 @@ import os
 
 import numpy as np
 
-from cvxopt import matrix, solvers
 from enum import IntEnum
-from scipy.linalg import block_diag
 
 from sklearn.datasets import make_blobs
 from sklearn.metrics import accuracy_score
@@ -42,22 +40,20 @@ def radial_basis_kernel(x1, x2, sigma):
     return np.exp(-0.5 * cross_norm_sqrd(x1, x2) / sigma)
 
 
-def add_support_vector_visualization(current_axis, x, y, support_vector_ids, w, b):
+def add_support_vector_visualization(current_axis, x, y, clf):
     """
     Highlight support vectors, draw margins and annotate slack variable values.
 
     :param current_axis: axis object
     :param x: np.ndarray; shape num_samples x num_features; feature matrix
     :param y: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
-    :param support_vector_ids: np.ndarray; shape num_samples x 1; boolean mask for support vectors
-    :param w: np.ndarray; shape num_features x 1; SVM weights
-    :param b: np.ndarray; shape 1 x 1; SVM bias
+    :param clf: classifier object
     :return:
     """
-    support_vectors = x[support_vector_ids]
-    support_vector_labels = y[support_vector_ids].squeeze()
+    support_vectors = x[clf.sv_bool]
+    support_vector_labels = y[clf.sv_bool].squeeze()
 
-    support_vector_projection = support_vectors @ w + b
+    support_vector_projection = clf.project(support_vectors)
     support_vector_slacks = np.zeros((support_vectors.shape[0],))
 
     nonzero_slack_id = support_vector_labels * support_vector_projection < 1
@@ -83,7 +79,8 @@ def add_support_vector_visualization(current_axis, x, y, support_vector_ids, w, 
                              linewidths=2,
                              label='noseći vektori')
 
-        current_axis.plot(x_linspace, (clss - b - w[0] * x_linspace) / w[1], color='black', linestyle=':', label='margine')
+        if type(clf) == SVMPrimal:
+            current_axis.plot(x_linspace, (clss - clf.b - clf.w[0] * x_linspace) / clf.w[1], color='black', linestyle=':', label='margine')
 
     for i in range(len(support_vector_slacks)):
         current_axis.annotate("{:.2f}".format(support_vector_slacks[i]), (support_vectors[i, 0], support_vectors[i, 1]))
@@ -101,6 +98,19 @@ def add_test_data_visualization(current_axis, x, y):
     for clss in np.unique(np.unique(y)):
         current_axis.scatter(*[x[y.squeeze() == clss, i] for i in range(2)], marker='x', s=100, linewidths=2,
                              label='test klasa {:d}'.format(int(clss)))
+
+
+def choose_svm(svm_solver_type, X_train, y_train, kernel_foo, C=1.0, sigma=1.0):
+    if svm_solver_type == SVMSolverType.Primal:
+        clf = SVMPrimal(X_train, y_train, C)
+
+    elif svm_solver_type == SVMSolverType.Dual:
+        clf = SVMDual(X_train, y_train, C, kernel_foo=lambda x1, x2: kernel_foo(x1, x2, sigma=sigma))
+
+    else:
+        raise NotImplementedError("SVMSolverType: ", svm_solver_type, " is not supported.")
+
+    return clf
 
 
 def experiment(x, y, C=1.0, svm_solver_type=SVMSolverType.Dual, test_size=0.2, random_state=None, resolution=(100, 100), sigma=1.0):
@@ -125,26 +135,15 @@ def experiment(x, y, C=1.0, svm_solver_type=SVMSolverType.Dual, test_size=0.2, r
                                      resolution=resolution)
     # add_test_data_visualization(plt.gca(), transforms.transform(X_test), y_test)
 
-    if svm_solver_type == SVMSolverType.Primal:
-        add_support_vector_visualization(plt.gca(), transforms.transform(X_train), y_train, clf.sv_bool, clf.w, clf.b)
+    add_support_vector_visualization(plt.gca(), transforms.transform(X_train), y_train, clf)
 
 
-# def train_and_predict(x_train, y_train, x_test, train_svm_foo, C=1.0):
-#     """
-#     Normalize data and train SVM.
-#     :param x_train: np.ndarray; shape num_samples x num_features; dataset feature matrix
-#     :param y_train: np.ndarray; shape num_samples x 1; dataset output vector
-#     :param x_test:  np.ndarray; shape num_test_samples x num_features; test set feature matrix
-#     :param train_svm_foo: function handle; function to train SVM
-#     :param C: float; soft margin SVM hyperparameter
-#     :return: tuple; weights and bias
-#     """
-#     transforms = Pipeline([('scaler', StandardScaler())])  # normalization
-#     transforms.fit(x_train)
-#
-#     w, b, _ = train_svm_foo(transforms.transform(x_train), y_train, C=C)
-#
-#     return predict_linear(transforms.transform(x_test), w, b)
+def train_and_predict(x_train, y_train, x_test, svm_solver_type, C, sigma):
+    transforms = Pipeline([('scaler', StandardScaler())])  # normalization
+    transforms.fit(x_train)
+    clf = choose_svm(svm_solver_type, transforms.transform(x_train), y_train, kernel_foo=radial_basis_kernel, C=C, sigma=sigma)
+
+    return clf.predict(transforms.transform(x_test))
 
 
 if __name__ == '__main__':
@@ -168,7 +167,7 @@ if __name__ == '__main__':
             x, y = make_blobs(n_samples=100, centers=2, n_features=2)
             y = np.sign(y - 0.5)[:, np.newaxis]  # {-1, 1}
 
-            experiment(x, y, C=1.0, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100))
+            experiment(x, y, C=1.0, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100), sigma=0.1)
 
     if args.csv_data:  # tabular data from memory
         __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -178,17 +177,10 @@ if __name__ == '__main__':
 
         experiment(x, y, C=1.0, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100), sigma=0.1)
 
-        # if svm_solver_type == SVMSolverType.Primal:
-        #     train_svm_foo = train_primal
-        # elif svm_solver_type == SVMSolverType.Dual:
-        #     train_svm_foo = train_dual
-        # else:
-        #     raise NotImplementedError("SVMSolverType: ", svm_solver_type, " is not supported.")
-        #
-        # hyperparameter_search(x, y, start=-4, stop=2,
-        #                       train_and_predict_foo=lambda x_train, y_train, x_test, C: train_and_predict(x_train, y_train, x_test,
-        #                                                                                                   train_svm_foo, C),
-        #                       metric_foo=accuracy_score, num=20, k_splits=5, n_repeats=2, confidence=0.95,
-        #                       xlabel='C', ylabel='preciznost')
+        hyperparameter_search(x, y, start=-4, stop=2,
+                              train_and_predict_foo=lambda x_train, y_train, x_test, C: train_and_predict(x_train, y_train, x_test,
+                                                                                                          svm_solver_type, C, sigma=0.1),
+                              metric_foo=accuracy_score, num=20, k_splits=5, n_repeats=2, confidence=0.95,
+                              xlabel='C', ylabel='preciznost')
 
     plt.show()

@@ -39,5 +39,8 @@ class SVMPrimal:
         self.sv_alpha = np.array(solution['z'][:num_samples])
         self.sv_bool = (self.sv_alpha > 1e-5).squeeze()
 
+    def project(self, x):
+        return x @ self.w + self.b
+
     def predict(self, x):
-        return np.sign(x @ self.w + self.b)
+        return np.sign(self.project(x))

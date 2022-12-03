@@ -28,10 +28,8 @@ class SVMDual:
         solvers.options['show_progress'] = False
         solution = solvers.qp(matrix(P), matrix(q), matrix(G), matrix(h), matrix(A), matrix(b))
 
-        # alfa
         alpha = np.array(solution['x'])
 
-        # support vectors
         self.sv_bool = (alpha > 1e-5).squeeze()
         self.sv_alpha = alpha[self.sv_bool]
         self.sv_x = x_train[self.sv_bool]
@@ -40,5 +38,8 @@ class SVMDual:
         self.bias = np.mean(self.sv_y) - np.sum(
             self.sv_alpha * self.sv_y * self.kernel_foo(self.sv_x, np.mean(self.sv_x, axis=0)[np.newaxis, :]))
 
+    def project(self, x):
+        return np.sum(self.sv_alpha * self.sv_y * self.kernel_foo(x, self.sv_x), axis=0) + self.bias
+
     def predict(self, x):
-        return np.sign(np.sum(self.sv_alpha * self.sv_y * self.kernel_foo(x, self.sv_x), axis=0) + self.bias)
+        return np.sign(self.project(x))
