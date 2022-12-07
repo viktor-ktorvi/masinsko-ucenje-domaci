@@ -25,8 +25,8 @@ def repeated_k_fold(x, y, train_and_predict_foo, metric_foo, n_splits=2, n_repea
 
     for i, indices in enumerate(rkf.split(x)):
         train_index, test_index = indices
-        x_train, x_test = x[train_index], x[test_index]
-        y_train, y_test = y[train_index], y[test_index]
+        x_train, x_test = x[train_index, :], x[test_index, :]
+        y_train, y_test = y[train_index, :], y[test_index, :]
 
         y_pred = train_and_predict_foo(x_train, y_train, x_test)
 
