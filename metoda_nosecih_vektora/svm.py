@@ -25,6 +25,9 @@ from utils.validation import hyperparameter_search
 
 
 class SVMSolverType(IntEnum):
+    """
+    Enum class to describe different SVM implementations.
+    """
     Primal = 1
     Dual = 2
 
@@ -55,8 +58,8 @@ def add_support_vector_visualization(current_axis, x, y, clf):
 
     support_vector_projection = clf.project(support_vectors)
 
-    support_vector_slacks = np.abs(support_vector_labels - support_vector_projection)
-    support_vector_slacks[np.logical_and(support_vector_labels == 1, support_vector_projection > 1)] = 0
+    support_vector_slacks = np.abs(support_vector_labels - support_vector_projection)  # nonzero on the wrong side of the margin
+    support_vector_slacks[np.logical_and(support_vector_labels == 1, support_vector_projection > 1)] = 0  # zero on the correct side of the margin
     support_vector_slacks[np.logical_and(support_vector_labels == -1, support_vector_projection < -1)] = 0
 
     x_min = np.min(x[:, 0])
@@ -72,17 +75,17 @@ def add_support_vector_visualization(current_axis, x, y, clf):
 
     x_linspace = np.linspace(*x_lim, 100)
 
-    for clss in np.unique(support_vector_labels):
+    for clss in np.unique(support_vector_labels):  # highlight the support vectors
         current_axis.scatter(*[support_vectors[support_vector_labels == clss, i] for i in range(2)],
                              facecolor='none',
                              edgecolor='lime',
                              linewidths=2,
                              label='noseći vektori')
 
-        if type(clf) == SVMPrimal:
+        if type(clf) == SVMPrimal:  # plot the margins
             current_axis.plot(x_linspace, (clss - clf.b - clf.w[0] * x_linspace) / clf.w[1], color='black', linestyle=':', label='margine')
 
-    for i in range(len(support_vector_slacks)):
+    for i in range(len(support_vector_slacks)):  # display the slack value for the support vectors
         current_axis.annotate("{:.2f}".format(support_vector_slacks[i]), (support_vectors[i, 0], support_vectors[i, 1]))
 
     current_axis.set_xlim(*x_lim)
@@ -95,12 +98,29 @@ def add_support_vector_visualization(current_axis, x, y, clf):
 
 
 def add_test_data_visualization(current_axis, x, y):
+    """
+    Add the test samples to the current plot.
+    :param current_axis: axis object
+    :param x: np.ndarray; shape num_samples x num_features; feature matrix
+    :param y: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
+    :return:
+    """
     for clss in np.unique(np.unique(y)):
         current_axis.scatter(*[x[y.squeeze() == clss, i] for i in range(2)], marker='x', s=100, linewidths=2,
                              label='test klasa {:d}'.format(int(clss)))
 
 
 def choose_svm(svm_solver_type, X_train, y_train, kernel_foo, C=1.0, sigma=1.0):
+    """
+    Construct SVM objects according to the specified type.
+    :param svm_solver_type: SVMSolverType
+    :param X_train: np.ndarray; shape num_samples x num_features; feature matrix
+    :param y_train: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
+    :param kernel_foo: foo
+    :param C: float; soft margin hyperparameter
+    :param sigma: float; gaussian kernel hyperparameter
+    :return: SVM object
+    """
     if svm_solver_type == SVMSolverType.Primal:
         clf = SVMPrimal(X_train, y_train, C)
 
@@ -139,6 +159,16 @@ def experiment(x, y, C=1.0, svm_solver_type=SVMSolverType.Dual, test_size=0.2, r
 
 
 def train_and_predict(x_train, y_train, x_test, svm_solver_type, C, sigma):
+    """
+    A function that trains an SVM classifier and predicts on the given test set.
+    :param x_train: np.ndarray; shape num_samples x num_features; feature matrix
+    :param y_train: np.ndarray; shape num_samples x 1; sample labels in {-1, 1}
+    :param x_test: np.ndarray; shape num_test_samples x num_features; test feature matrix
+    :param svm_solver_type: SVMSolverType
+    :param C: float; soft margin hyperparameter
+    :param sigma: float; gaussian kernel hyperparameter
+    :return: np.ndarray; shape num_test_samples x 1; test predictions
+    """
     transforms = Pipeline([('scaler', StandardScaler())])  # normalization
     transforms.fit(x_train)
     clf = choose_svm(svm_solver_type, transforms.transform(x_train), y_train, kernel_foo=radial_basis_kernel, C=C, sigma=sigma)
