@@ -56,7 +56,7 @@ def add_support_vector_visualization(current_axis, x, y, clf):
     support_vectors = x[clf.sv_bool]
     support_vector_labels = y[clf.sv_bool].squeeze()
 
-    support_vector_projection = clf.project(support_vectors)
+    support_vector_projection = clf.project(support_vectors).squeeze()
 
     support_vector_slacks = np.abs(support_vector_labels - support_vector_projection)  # nonzero on the wrong side of the margin
     support_vector_slacks[np.logical_and(support_vector_labels == 1, support_vector_projection > 1)] = 0  # zero on the correct side of the margin

@@ -33,7 +33,7 @@ class SVMPrimal:
         solvers.options['show_progress'] = False
         solution = solvers.qp(matrix(P), matrix(q), matrix(G), matrix(h))
 
-        self.w = np.array(solution['x'][:num_features]).squeeze()
+        self.w = np.array(solution['x'][:num_features])
         self.b = np.array(solution['x'][num_features])
 
         self.sv_alpha = np.array(solution['z'][:num_samples])
