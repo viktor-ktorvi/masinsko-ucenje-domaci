@@ -30,5 +30,5 @@ if __name__ == '__main__':
         plt.plot(x_axis[i], abs_corr_coefs[sorted_ids[i]], marker='^', c=colors[i, :], markersize=16)  # marker=r'${:s}$'.format(str(sorted_ids[i]))
 
     plt.xlabel('redni broj prediktora')
-    plt.ylabel('koeficijent korelacije sa ciljnom promenljivom')
+    plt.ylabel(r'$|\rho(x_i, y)|$')
     plt.show()
