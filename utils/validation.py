@@ -12,8 +12,8 @@ def repeated_k_fold(x, y, train_and_predict_foo, metric_foo, n_splits=2, n_repea
 
     :param x: np.ndarray; shape num_samples x num_features; dataset feature matrix
     :param y: np.ndarray; shape num_samples x 1; dataset output vector
-    :param train_and_predict_foo:
-    :param metric_foo:
+    :param train_and_predict_foo: function handle that takes (x_train, y_train, x_test) as an input
+    :param metric_foo: function handle that takes (y_test, y_pred) as an input
     :param n_splits: int; k in k-fold
     :param n_repeats: int; number of times to do k-fold cross validation
     :param random_state: int; random seed
