@@ -14,7 +14,7 @@ if __name__ == '__main__':
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
     csv_path_1 = os.path.join(__location__, 'data_2.csv')  # data path
 
-    wandb.init(project="mu-domaci-logisticka-regresija", config=os.path.join(__location__, 'random-forest-config-defaults.yaml'), mode='disabled')
+    wandb.init(project="mu-domaci-random-forest", config=os.path.join(__location__, 'random-forest-config-defaults.yaml'), mode='disabled')
 
     x, y = load_data(csv_path_1)  # load data
 
