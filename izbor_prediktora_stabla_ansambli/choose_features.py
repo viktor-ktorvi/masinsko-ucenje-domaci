@@ -76,7 +76,7 @@ if __name__ == '__main__':
     sorted_ids = np.argsort(abs_corr_coefs)
 
     plt.figure()  # plot correlation coefficients
-    x_axis = np.arange(num_features)
+    x_axis = np.arange(num_features)[::-1]
     plt.xticks(x_axis, sorted_ids)
     for i in range(num_features):
         plt.vlines(x_axis[i], min(abs_corr_coefs), abs_corr_coefs[sorted_ids[i]], colors=colors[sorted_ids[i], :], linestyles=stem_linestyle, alpha=stem_alpha)
