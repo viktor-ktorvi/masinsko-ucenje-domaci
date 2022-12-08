@@ -21,7 +21,7 @@ from metoda_nosecih_vektora.dual import SVMDual
 from metoda_nosecih_vektora.primal import SVMPrimal
 
 from utils.utils import cross_norm_sqrd
-from utils.validation import hyperparameter_search
+from utils.validation import log_hyperparameter_search
 
 
 class SVMSolverType(IntEnum):
@@ -207,19 +207,19 @@ if __name__ == '__main__':
 
         experiment(x, y, C=0.5, svm_solver_type=svm_solver_type, test_size=0.2, random_state=78962, resolution=(100, 100), sigma=0.1)
 
-        hyperparameter_search(x, y, start=-4, stop=2,
-                              train_and_predict_foo=lambda x_train, y_train, x_test, C: train_and_predict(x_train, y_train, x_test,
+        log_hyperparameter_search(x, y, start=-4, stop=2,
+                                  train_and_predict_foo=lambda x_train, y_train, x_test, C: train_and_predict(x_train, y_train, x_test,
                                                                                                           svm_solver_type, C=C,
                                                                                                           sigma=0.1),
-                              metric_foo=accuracy_score, num=20, k_splits=5, n_repeats=2, confidence=0.95,
-                              xlabel='C', ylabel='preciznost')
+                                  metric_foo=accuracy_score, num=20, k_splits=5, n_repeats=2, confidence=0.95,
+                                  xlabel='C', ylabel='preciznost')
 
         if svm_solver_type == SVMSolverType.Dual:
-            hyperparameter_search(x, y, start=-4, stop=2,
-                                  train_and_predict_foo=lambda x_train, y_train, x_test, sigma: train_and_predict(x_train, y_train, x_test,
+            log_hyperparameter_search(x, y, start=-4, stop=2,
+                                      train_and_predict_foo=lambda x_train, y_train, x_test, sigma: train_and_predict(x_train, y_train, x_test,
                                                                                                                   svm_solver_type, C=0.5,
                                                                                                                   sigma=sigma),
-                                  metric_foo=accuracy_score, num=20, k_splits=5, n_repeats=2, confidence=0.95,
-                                  xlabel=r'$\sigma$', ylabel='preciznost')
+                                      metric_foo=accuracy_score, num=20, k_splits=5, n_repeats=2, confidence=0.95,
+                                      xlabel=r'$\sigma$', ylabel='preciznost')
 
     plt.show()

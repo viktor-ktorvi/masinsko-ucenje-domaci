@@ -77,8 +77,8 @@ class RepeatedKFold:
         return validation_indices
 
 
-def hyperparameter_search(x, y, start, stop, train_and_predict_foo, metric_foo, num=1, k_splits=2, n_repeats=1, confidence=0.95,
-                          xlabel='hyperparameter', ylabel='metric'):
+def log_hyperparameter_search(x, y, start, stop, train_and_predict_foo, metric_foo, num=1, k_splits=2, n_repeats=1, confidence=0.95,
+                              xlabel='hyperparameter', ylabel='metric'):
     """
     Log(base 10) scale hyperparameter grid search.
 
