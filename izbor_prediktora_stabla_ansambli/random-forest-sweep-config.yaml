@@ -1,0 +1,19 @@
+program: random_forest.py
+
+method: random
+
+parameters:
+  n_estimators:
+    distribution: int_uniform
+    min: 1
+    max: 200
+
+  max_depth:
+    distribution: int_uniform
+    min: 1
+    max: 20
+
+  max_features:
+    distribution: int_uniform
+    min: 1
+    max: 6

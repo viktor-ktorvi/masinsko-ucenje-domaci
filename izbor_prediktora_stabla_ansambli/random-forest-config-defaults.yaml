@@ -1,0 +1,16 @@
+# random forest default parameters yaml
+n_estimators:
+  desc: number of models in the ansamble
+  value: 100
+
+max_depth:
+  desc: maximum depth of decision trees
+  value: 4
+
+max_features:
+  desc: number of features to consider when looking for the best split
+  value: 2
+
+random_state:
+  desc: random seed for reproducibility purposes
+  value: 8122022
