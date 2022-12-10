@@ -13,14 +13,10 @@ from data_loading.data_loading import load_data
 
 def train_and_predict_foo(x_train, y_train, x_test, **kwargs):
     """
-
+    Train a GB classifier and predict on the test set. Get the hyperparameters from **kwargs.
     :param x_train: np.ndarray; shape num_samples x num_features; dataset feature matrix
     :param y_train: np.ndarray; shape num_samples x 1; dataset labels
     :param x_test: np.ndarray; shape num_test_samples x num_features; test dataset feature matrix
-    :param n_estimators: int; number of models in the ensemble
-    :param max_depth: int; maximum depth of decision trees
-    :param learning_rate: float; learning rate
-    :param random_state: int; random seed for reproducibility purposes
     :return: np.ndarray; shape num_test_samples x 1; test predictions
     """
     gradient_boosting_clf = GradientBoostingClassifier(**kwargs)
@@ -43,11 +39,7 @@ if __name__ == '__main__':
               'random_state': wandb.config.random_state}
 
     accuracies = repeated_k_fold(x, y,
-                                 train_and_predict_foo=lambda x_train, y_train, x_test: train_and_predict_foo(x_train, y_train, x_test,
-                                                                                                              n_estimators=wandb.config.n_estimators,
-                                                                                                              max_depth=wandb.config.max_depth,
-                                                                                                              learning_rate=wandb.config.learning_rate,
-                                                                                                              random_state=wandb.config.random_state),
+                                 train_and_predict_foo=lambda x_train, y_train, x_test: train_and_predict_foo(x_train, y_train, x_test, **kwargs),
                                  metric_foo=accuracy_score, n_splits=5, n_repeats=2, random_state=wandb.config.random_state)
 
     print(pd.DataFrame(accuracies).describe())
