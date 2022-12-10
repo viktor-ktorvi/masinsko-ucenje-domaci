@@ -13,14 +13,10 @@ from data_loading.data_loading import load_data
 
 def train_and_predict_foo(x_train, y_train, x_test, **kwargs):
     """
-
+    Train an RF classifier and predict on the test set. Get the hyperparameters from **kwargs.
     :param x_train: np.ndarray; shape num_samples x num_features; dataset feature matrix
     :param y_train: np.ndarray; shape num_samples x 1; dataset labels
     :param x_test: np.ndarray; shape num_test_samples x num_features; test dataset feature matrix
-    :param n_estimators: int; number of models in the ensemble
-    :param max_depth: int; maximum depth of decision trees
-    :param max_features: int; number of features to consider when looking for the best split
-    :param random_state: int; random seed for reproducibility purposes
     :return: np.ndarray; shape num_test_samples x 1; test predictions
     """
     random_forest_clf = RandomForestClassifier(**kwargs)

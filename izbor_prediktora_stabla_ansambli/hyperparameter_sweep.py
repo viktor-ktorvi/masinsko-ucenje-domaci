@@ -14,10 +14,11 @@ from utils.validation import repeated_k_fold
 
 def train(x, y, config_path, train_and_predict_foo, n_splits=5, n_repeats=2):
     """
-
+    Train a classifier and k-fold validate it. Take parameters from wandb.
     :param x: np.ndarray; shape num_samples x num_features; dataset feature matrix
     :param y: np.ndarray; shape num_samples x 1; dataset labels
-    :param config_path: string; wandb condig defaults path
+    :param config_path: string; wandb config defaults path
+    :param train_and_predict_foo: function handle
     :param n_splits: int; k in k-fold validation
     :param n_repeats: int; number of times to do k-fold validation
     :return:
@@ -41,14 +42,14 @@ def train(x, y, config_path, train_and_predict_foo, n_splits=5, n_repeats=2):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--count', type=int, nargs='?', default=None)
+    parser = argparse.ArgumentParser()  # cmd line arguments
+    parser.add_argument('--count', type=int, nargs='?', default=None)  # number of runs in the sweep
     parser.add_argument('--classifier_name', type=str, required=True)
 
     args = parser.parse_args()
     print("Passed Arguments:\n", args)
 
-    if args.classifier_name.lower() == 'random_forest':
+    if args.classifier_name.lower() == 'random_forest':  # select the correct yaml files
         sweep_config_name = 'random-forest-sweep-config.yaml'
         defaults_config_name = 'random-forest-config-defaults.yaml'
 
@@ -59,7 +60,7 @@ if __name__ == '__main__':
     else:
         raise ValueError("Classifier '{:s}' is not supported".format(args.classifier_name.lower()))
 
-    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))  # load configs
     sweep_config_path = os.path.join(__location__, sweep_config_name)
 
     with open(sweep_config_path, 'r') as stream:
@@ -68,11 +69,11 @@ if __name__ == '__main__':
         except yaml.YAMLError as exc:
             print(exc)
 
-    csv_path = os.path.join(__location__, "data_2.csv")
+    csv_path = os.path.join(__location__, "data_2.csv")  # load data
     x, y = load_data(csv_path)
 
 
-    def train_random_forest():
+    def train_random_forest():  # dedicated train functions
         train(x, y, config_path=os.path.join(__location__, defaults_config_name), train_and_predict_foo=random_forest.train_and_predict_foo, n_splits=5, n_repeats=2)
 
 
@@ -82,5 +83,5 @@ if __name__ == '__main__':
 
     train_foo = train_random_forest if args.classifier_name.lower() == 'random_forest' else train_gradient_boost
 
-    sweep_id = wandb.sweep(sweep_config, project="mu-domaci-random-forest-and-gradient-boosting")
+    sweep_id = wandb.sweep(sweep_config, project="mu-domaci-random-forest-and-gradient-boosting")  # run the sweep
     wandb.agent(sweep_id, function=train_foo, count=args.count)
