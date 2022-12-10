@@ -38,11 +38,23 @@ def train(x, y, config_path, n_splits=5, n_repeats=2):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--count', type=int, nargs='?', default=None)
+    parser.add_argument('--classifier_name', type=str, required=True)
+
     args = parser.parse_args()
     print("Passed Arguments:\n", args)
 
+    if args.classifier_name.lower() == 'random_forest':
+        sweep_config_name = 'random-forest-sweep-config.yaml'
+        defaults_config_name = 'random-forest-config-defaults.yaml'
+    elif args.classifier_name.lower() == 'gradient_boost':
+        raise NotImplemented
+        # sweep_config_name = ''
+        # defaults_config_name = ''
+    else:
+        raise ValueError("Classifier '{:s}' is not supported".format(args.classifier_name.lower()))
+
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    sweep_config_path = os.path.join(__location__, "random-forest-sweep-config.yaml")
+    sweep_config_path = os.path.join(__location__, sweep_config_name)
 
     with open(sweep_config_path, 'r') as stream:
         try:
@@ -53,5 +65,16 @@ if __name__ == '__main__':
     csv_path = os.path.join(__location__, "data_2.csv")
     x, y = load_data(csv_path)
 
-    sweep_id = wandb.sweep(sweep_config, project="mu-domaci-random-forest")
-    wandb.agent(sweep_id, function=lambda: train(x, y, config_path=os.path.join(__location__, 'random-forest-config-defaults.yaml'), n_splits=5, n_repeats=2), count=args.count)
+
+    def train_random_forest():
+        train(x, y, config_path=os.path.join(__location__, defaults_config_name), n_splits=5, n_repeats=2)
+
+
+    def train_gradient_boost():
+        raise NotImplemented
+
+
+    train_foo = train_random_forest if args.classifier_name.lower() == 'random_forest' else train_gradient_boost
+
+    sweep_id = wandb.sweep(sweep_config, project="mu-domaci-random-forest-and-gradient-boost")
+    wandb.agent(sweep_id, function=train_foo, count=args.count)
