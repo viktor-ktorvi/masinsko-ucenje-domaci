@@ -1,0 +1,20 @@
+program: hyperparameter_sweep.py
+name: gradient_boosting
+
+method: random
+
+parameters:
+  n_estimators:
+    distribution: int_uniform
+    min: 1
+    max: 200
+
+  max_depth:
+    distribution: int_uniform
+    min: 1
+    max: 20
+
+  learning_rate:
+    distribution: log_uniform_values
+    min: 0.001
+    max: 1
