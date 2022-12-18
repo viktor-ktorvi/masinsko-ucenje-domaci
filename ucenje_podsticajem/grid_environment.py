@@ -2,7 +2,7 @@ import random
 
 from enum import IntEnum
 
-from ucenje_podsticajem.actor import ActionTypes
+from ucenje_podsticajem.agent import ActionTypes
 
 
 class FieldTypes(IntEnum):

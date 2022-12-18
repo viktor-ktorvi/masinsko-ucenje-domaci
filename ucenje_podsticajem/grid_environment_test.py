@@ -2,7 +2,7 @@ import unittest
 
 from collections import Counter
 
-from ucenje_podsticajem.actor import ActionTypes
+from ucenje_podsticajem.agent import ActionTypes
 from ucenje_podsticajem.grid_environment import GridEnvironment
 
 
