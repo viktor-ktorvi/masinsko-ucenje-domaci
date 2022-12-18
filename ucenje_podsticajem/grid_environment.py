@@ -103,21 +103,23 @@ class GridEnvironment:
 
         self.current_state = self.start_state
 
-    def step(self, action):
+    def step(self, action=None):
         """
         Pass the given action through the stochastic environment and apply it. Return the current state and reward.
         :param action: ActionTypes
         :return: tuple(State2D, int); current state and reward
         """
-        # stochastically modify the action
-        coin_toss = random.choices([True, False], weights=[self.stochasticity, 1 - self.stochasticity])[0]
-        if coin_toss:
-            self.applied_action = GridEnvironment.randomOrthogonalAction(action)
-        else:
-            self.applied_action = action
 
-        # apply the action
-        self.applyAction(self.applied_action)
+        if action is not None:
+            # stochastically modify the action
+            coin_toss = random.choices([True, False], weights=[self.stochasticity, 1 - self.stochasticity])[0]
+            if coin_toss:
+                self.applied_action = GridEnvironment.randomOrthogonalAction(action)
+            else:
+                self.applied_action = action
+
+            # apply the action
+            self.applyAction(self.applied_action)
 
         terminal_flag = self.env_map[self.current_state.row][self.current_state.column] == FieldTypes.TERMINAL
 
