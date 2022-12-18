@@ -119,8 +119,10 @@ class GridEnvironment:
         # apply the action
         self.applyAction(self.applied_action)
 
+        terminal_flag = self.env_map[self.current_state.row][self.current_state.column] == FieldTypes.TERMINAL
+
         # return the observation and reward
-        return self.current_state, self.getReward(self.current_state)
+        return self.current_state, self.getReward(self.current_state), terminal_flag
 
     def applyAction(self, action):
         """
