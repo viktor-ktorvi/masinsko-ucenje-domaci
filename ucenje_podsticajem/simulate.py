@@ -10,12 +10,14 @@ from ucenje_podsticajem.agent import AgentQ
 from ucenje_podsticajem.grid_environment import GridEnvironment
 
 if __name__ == '__main__':
+    num_episodes = 1000
+    learning_rate = 0.1
+    decrease_lr = False
+
     # init env and agent
     grid_environment = GridEnvironment()
-    agent = AgentQ(grid_environment.height, grid_environment.width, epsilon=0.98, learning_rate=0.1)
+    agent = AgentQ(grid_environment.height, grid_environment.width, epsilon=0.98, init_learning_rate=learning_rate)
     agent.train()
-
-    num_episodes = 1000
 
     rewards = []  # record the reward and epsilon values
     epsilon = []
@@ -36,7 +38,12 @@ if __name__ == '__main__':
             q_values_dict[observation].append((episode, agent.getMaxQ(observation)))
             action = agent.act(observation)
             observation, reward, terminate = grid_environment.step(action)
-            agent.observe(observation, reward, epoch)
+
+            if decrease_lr:
+                learning_rate = np.log(epoch + 1) / (epoch + 1) * agent.init_learning_rate
+            else:
+                learning_rate = agent.init_learning_rate
+            agent.observe(observation, reward, learning_rate)
 
             epoch += 1
 
