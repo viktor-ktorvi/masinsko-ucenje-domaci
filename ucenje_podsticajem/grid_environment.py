@@ -12,7 +12,7 @@ class FieldTypes(IntEnum):
 
 
 class State2D:
-    def __init__(self, row=0, column=0, row_limits=None, column_limits=None):
+    def __init__(self, row=0, column=0):
         """
         Init a state that consists of (row, column).
         :param row: int
@@ -22,17 +22,14 @@ class State2D:
         """
         self.row = row
         self.column = column
-        self.row_limits = row_limits
-        self.column_limits = column_limits
 
-    def inLimits(self):
-        """
-        Check if the state is within the limits.
-        :return: boolean
-        """
-        return self.row_limits[0] <= self.row <= self.row_limits[1] and self.column_limits[0] <= self.column <= self.column_limits[1]
+    def __eq__(self, other):
+        if isinstance(other, State2D):
+            return (self.row, self.column) == (other.row, other.column)
 
-    def isEqual(self, row, column):
+        return NotImplemented
+
+    def isEqualTo(self, row, column):
         """
         Check if the state is equal to a row column pair.
         :param row: int
@@ -49,10 +46,28 @@ class GridEnvironment:
         :param env_map: List[List[FieldTypes]]
         :param start_state: State2D
         """
-        self.stochasticity = stochasticity
-        self.current_state = None
-        self.start_state = None
 
+        self.applied_action = None
+        self.current_state = None
+        self.env_map = None
+        self.height = None
+        self.reward_map = None
+        self.start_state = None
+        self.stochasticity = stochasticity
+        self.valid_states = []
+        self.width = None
+
+        self.loadEnvMap(env_map)
+        self.loadRewardMap(reward_map)
+
+        self.reset(start_state)
+
+    def loadEnvMap(self, env_map):
+        """
+        Process the given environment map. If it's None load the default one. Assert that the dimensions are valid and load get the list of valid states.
+        :param env_map: List[List[FieldTypes]]
+        :return:
+        """
         if env_map is None:  # default map
             env_map = [
                 [FieldTypes.WALL] * 7,
@@ -61,8 +76,20 @@ class GridEnvironment:
                 [FieldTypes.WALL] * 7
             ]
 
+        GridEnvironment.assertRectangular(env_map)
         self.env_map = env_map
 
+        self.height = len(self.env_map)
+        self.width = len(self.env_map[0])
+
+        self.getValidStates()
+
+    def loadRewardMap(self, reward_map):
+        """
+        Process the given reward map. If it's None load the default one. Assert that the dimensions are valid.
+        :param reward_map: List[List[int/float]]
+        :return:
+        """
         if reward_map is None:
             reward_map = [
                 [0] * 7,
@@ -73,22 +100,11 @@ class GridEnvironment:
 
         self.reward_map = reward_map
 
-        # assert that the grid is rectangular
-        GridEnvironment.assertRectangular(self.env_map)
         GridEnvironment.assertRectangular(self.reward_map)
-
-        self.height = len(self.env_map)
-        self.width = len(self.env_map[0])
-        self.row_limits = (1, self.height - 2)
-        self.column_limits = (1, self.width - 2)
 
         # assert that the reward map matches the grid
         assert self.height == len(self.reward_map)
         assert self.width == len(self.reward_map[0])
-
-        self.applied_action = None
-
-        self.reset(start_state)
 
     def reset(self, start_state=None):
         """
@@ -97,9 +113,10 @@ class GridEnvironment:
         :return:
         """
         if start_state is None:
-            self.start_state = State2D(1, 1, self.row_limits, self.column_limits)
+            start_state = State2D(1, 1)
 
-        assert self.start_state.inLimits()  # assert that the state is in bounds
+        assert start_state in self.valid_states
+        self.start_state = start_state
 
         self.current_state = self.start_state
 
@@ -145,9 +162,9 @@ class GridEnvironment:
         else:
             raise ValueError("Action '{:s}' not supported.".format(action))
 
-        new_state = State2D(row, column, self.row_limits, self.column_limits)
+        new_state = State2D(row, column)
 
-        if new_state.inLimits():  # if the new state is within limits then update the current state
+        if new_state in self.valid_states:
             self.current_state = new_state
 
     def getReward(self, state):
@@ -188,7 +205,7 @@ class GridEnvironment:
         for row in range(len(self.env_map)):
             print("{:{cell_size}s}".format(str(row), cell_size=cell_size), end='')
             for column in range(len(self.env_map[0])):
-                if self.current_state.isEqual(row, column):
+                if self.current_state.isEqualTo(row, column):
                     output = "*" + self.env_map[row][column].name  # denote the current state with a '*'
                 else:
                     output = self.env_map[row][column].name
@@ -200,6 +217,18 @@ class GridEnvironment:
 
             print()
         print()
+
+    def getValidStates(self):
+        """
+        Get all the states that aren't walls.
+        :return:
+        """
+        self.valid_states = []
+
+        for row in range(self.height):
+            for column in range(self.width):
+                if self.env_map[row][column] is not FieldTypes.WALL:
+                    self.valid_states.append(State2D(row=row, column=column))
 
     @staticmethod
     def assertRectangular(double_list):
@@ -234,7 +263,7 @@ if __name__ == '__main__':
     grid_environment = GridEnvironment()
     grid_environment.printMap()
 
-    actions = [ActionTypes.RIGHT, ActionTypes.UP, ActionTypes.RIGHT, ActionTypes.DOWN, ActionTypes.UP] + [ActionTypes.RIGHT] * 3 + [ActionTypes.LEFT] * 8 + [ActionTypes.DOWN] * 3
+    actions = [ActionTypes.RIGHT, ActionTypes.DOWN]
     for i in range(len(actions)):
         # grid_environment.applyAction(actions[i])
         grid_environment.step(actions[i])
