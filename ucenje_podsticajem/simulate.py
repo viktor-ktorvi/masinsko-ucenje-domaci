@@ -11,6 +11,14 @@ from ucenje_podsticajem.grid_environment import GridEnvironment
 
 
 def simulate(grid_environment, agent, num_episodes=10, decrease_lr=False):
+    """
+    Simulate the agent playing in the environment. The agent can be in both train and eval mode.
+    :param grid_environment: GridEnvironment
+    :param agent: AgentQ
+    :param num_episodes: int
+    :param decrease_lr: boolean
+    :return: tuple(List[int/float], List[float], Dict); reward after each episode, epsilon after each episode, a dictionary of value functions per state, per episode
+    """
     rewards = []  # record the reward and epsilon values
     epsilon = []
 
@@ -48,38 +56,15 @@ def simulate(grid_environment, agent, num_episodes=10, decrease_lr=False):
     return rewards, epsilon, v_values_dict
 
 
-if __name__ == '__main__':
-    num_episodes = 10000
-    learning_rate = 0.01
-    init_epsilon = 0.98
-    decrease_lr = True
-
-    # init env and agent
-    grid_environment = GridEnvironment()
-    agent = AgentQ(grid_environment.height, grid_environment.width, init_epsilon=init_epsilon, init_learning_rate=learning_rate)
-    agent.train()
-
-    rewards, epsilon, v_values_dict = simulate(grid_environment, agent, num_episodes=num_episodes, decrease_lr=decrease_lr)
-
-
-    def running_average(x, window_size):
-        return np.convolve(x, np.ones(window_size) / window_size, mode='valid')
-
-
-    fig, ax = plt.subplots(2, 1, sharex='col')
-
-    ax[0].set_title('Nagrada')
-    ax[0].plot(rewards, label='nagrada')
-    ax[0].plot(running_average(rewards, 20), label='srednja nagrada')
-    ax[0].set_ylabel('R')
-    ax[0].legend()
-
-    ax[1].set_title('Stopa istraživanja')
-    ax[1].plot(epsilon)
-    ax[1].set_ylabel('$\epsilon$')
-
-    plt.xlabel('epizoda')
-
+def plot_value_functions(v_values_dict, num_episodes):
+    r"""
+    Plot the value function $V_t(s) = \max_a \ Q_t(s, a)$ for every state provided in the v_values_dict.
+    If a state has been visited multiple times per episode, then average the visits. If a state hasn't been visited in an episode,
+    then interpolate.
+    :param v_values_dict: dict; key = State2D; value = tuple(int, float) - episode id and V value.
+    :param num_episodes: int
+    :return:
+    """
     plt.figure()
     full_episode_ids = np.arange(num_episodes)
 
@@ -104,4 +89,40 @@ if __name__ == '__main__':
     plt.xlabel('epizoda')
     plt.ylabel('$V_{epizoda}(s)$')
     plt.legend()
+
+
+if __name__ == '__main__':
+    num_episodes = 1000
+    learning_rate = 0.1
+    init_epsilon = 0.98
+    decrease_lr = True
+
+    # init env and agent
+    grid_environment = GridEnvironment()
+    agent = AgentQ(grid_environment.height, grid_environment.width, init_epsilon=init_epsilon, init_learning_rate=learning_rate)
+    agent.train()
+
+    rewards, epsilon, v_values_dict = simulate(grid_environment, agent, num_episodes=num_episodes, decrease_lr=decrease_lr)
+
+
+    def running_average(x, window_size):
+        return np.convolve(x, np.ones(window_size) / window_size, mode='valid')
+
+
+    fig, ax = plt.subplots(2, 1, sharex='col')
+
+    ax[0].set_title('Nagrada')
+    ax[0].plot(rewards, label='nagrada', alpha=0.6)
+    ax[0].plot(running_average(rewards, 20), label='srednja nagrada')
+    ax[0].set_ylabel('R')
+    ax[0].legend()
+
+    ax[1].set_title('Stopa istraživanja')
+    ax[1].plot(epsilon)
+    ax[1].set_ylabel('$\epsilon$')
+
+    plt.xlabel('epizoda')
+
+    plot_value_functions(v_values_dict, num_episodes)
+
     plt.show()
