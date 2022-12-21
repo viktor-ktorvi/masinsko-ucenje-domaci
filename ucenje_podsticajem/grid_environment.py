@@ -29,6 +29,12 @@ class State2D:
 
         return NotImplemented
 
+    def __key(self):
+        return self.row, self.column
+
+    def __hash__(self):
+        return hash(self.__key())
+
     def isEqualTo(self, row, column):
         """
         Check if the state is equal to a row column pair.
