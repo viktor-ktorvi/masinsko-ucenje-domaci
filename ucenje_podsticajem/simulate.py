@@ -100,10 +100,11 @@ if __name__ == '__main__':
     init_epsilon = 0.97
     decrease_lr = True
     time_penalty_weight = 0.0
+    gamma = 0.9
 
     # init env and agent
     grid_environment = GridEnvironment()
-    agent = AgentQ(grid_environment.height, grid_environment.width, init_epsilon=init_epsilon, init_learning_rate=learning_rate)
+    agent = AgentQ(grid_environment.height, grid_environment.width, init_epsilon=init_epsilon, init_learning_rate=learning_rate, gamma=gamma)
     agent.train()
 
     rewards, epsilon, steps, v_values_dict = simulate(grid_environment, agent, num_episodes=num_episodes, decrease_lr=decrease_lr, time_penalty_weight=time_penalty_weight)
@@ -130,7 +131,6 @@ if __name__ == '__main__':
     ax[2].plot(running_average(steps, 15), label='srednja vrednost koraka')
     ax[2].set_ylabel('#')
     ax[2].legend()
-
 
     plt.xlabel('epizoda')
 
