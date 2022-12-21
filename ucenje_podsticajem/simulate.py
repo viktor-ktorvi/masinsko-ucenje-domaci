@@ -9,22 +9,14 @@ from matplotlib import pyplot as plt
 from ucenje_podsticajem.agent import AgentQ
 from ucenje_podsticajem.grid_environment import GridEnvironment
 
-if __name__ == '__main__':
-    num_episodes = 1000
-    learning_rate = 0.1
-    decrease_lr = False
 
-    # init env and agent
-    grid_environment = GridEnvironment()
-    agent = AgentQ(grid_environment.height, grid_environment.width, epsilon=0.98, init_learning_rate=learning_rate)
-    agent.train()
-
+def simulate(grid_environment, agent, num_episodes=10, decrease_lr=False):
     rewards = []  # record the reward and epsilon values
     epsilon = []
 
-    q_values_dict = {}  # record the q values for the individual states
+    v_values_dict = {}  # record the V values for the individual states
     for state in grid_environment.valid_states:
-        q_values_dict[state] = []
+        v_values_dict[state] = []
 
     # loop episodes; each episode starts at the starting state and ends at a terminal state
     for episode in tqdm(range(num_episodes)):
@@ -35,10 +27,12 @@ if __name__ == '__main__':
 
         epoch = 0  # play the grid game
         while not terminate:
-            q_values_dict[observation].append((episode, agent.getMaxQ(observation)))
+            v_values_dict[observation].append((episode, agent.getMaxQ(observation)))  # record V value of current state
+
             action = agent.act(observation)
             observation, reward, terminate = grid_environment.step(action)
 
+            # learning rate strategy
             if decrease_lr:
                 learning_rate = np.log(epoch + 1) / (epoch + 1) * agent.init_learning_rate
             else:
@@ -50,6 +44,22 @@ if __name__ == '__main__':
         # collect data
         rewards.append(reward)
         epsilon.append(agent.epsilon)
+
+    return rewards, epsilon, v_values_dict
+
+
+if __name__ == '__main__':
+    num_episodes = 10000
+    learning_rate = 0.01
+    init_epsilon = 0.98
+    decrease_lr = True
+
+    # init env and agent
+    grid_environment = GridEnvironment()
+    agent = AgentQ(grid_environment.height, grid_environment.width, init_epsilon=init_epsilon, init_learning_rate=learning_rate)
+    agent.train()
+
+    rewards, epsilon, v_values_dict = simulate(grid_environment, agent, num_episodes=num_episodes, decrease_lr=decrease_lr)
 
 
     def running_average(x, window_size):
@@ -73,25 +83,25 @@ if __name__ == '__main__':
     plt.figure()
     full_episode_ids = np.arange(num_episodes)
 
-    for state in q_values_dict:
-        if not q_values_dict[state]:  # if the state hasn't been visited
+    for state in v_values_dict:
+        if not v_values_dict[state]:  # if the state hasn't been visited
             continue
 
         # a state can be visited multiple times per episode. We average the values of those visits
-        episode_ids_with_duplicates = [tuple_pair[0] for tuple_pair in q_values_dict[state]]
-        associated_q_values = [tuple_pair[1] for tuple_pair in q_values_dict[state]]
+        episode_ids_with_duplicates = [tuple_pair[0] for tuple_pair in v_values_dict[state]]
+        associated_v_values = [tuple_pair[1] for tuple_pair in v_values_dict[state]]
 
         # average based on grouping by the same index
-        q_values_averaged_per_episode = pd.Series(associated_q_values).groupby(episode_ids_with_duplicates).mean().to_numpy()
+        v_values_averaged_per_episode = pd.Series(associated_v_values).groupby(episode_ids_with_duplicates).mean().to_numpy()
 
         unique_episode_ids = np.unique(episode_ids_with_duplicates)  # all the episodes that this state was explored in
 
         # a state can remain unvisited in an episode, so we interpolate in those cases
-        interpolation_function = interpolate.interp1d(unique_episode_ids, q_values_averaged_per_episode, kind='previous', fill_value="extrapolate")
+        interpolation_function = interpolate.interp1d(unique_episode_ids, v_values_averaged_per_episode, kind='previous', fill_value="extrapolate")
 
         plt.plot(interpolation_function(full_episode_ids), label='s = ({:d}, {:d})'.format(state.row, state.column))
 
     plt.xlabel('epizoda')
-    plt.ylabel('$\max_a \ Q(s, a)$')
+    plt.ylabel('$V_{epizoda}(s)$')
     plt.legend()
     plt.show()

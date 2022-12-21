@@ -11,19 +11,19 @@ class ActionTypes(IntEnum):
 
 
 class AgentQ:
-    def __init__(self, state_height, state_width, init_learning_rate=1, epsilon=0.999, gamma=0.9):
+    def __init__(self, state_height, state_width, init_learning_rate=1, init_epsilon=0.999, gamma=0.9):
         """
         Initialize the Q learning agent.
         :param state_height: int
         :param state_width: int
         :param init_learning_rate: float
-        :param epsilon: float; greedy exploration parameter
+        :param init_epsilon: float; greedy exploration parameter
         :param gamma: float; discount factor
         """
         self.Q_table = None
         self.epsilon = None
         self.gamma = gamma
-        self.init_epsilon = epsilon
+        self.init_epsilon = init_epsilon
         self.init_learning_rate = init_learning_rate
         self.prev_action = None
         self.prev_state = None
