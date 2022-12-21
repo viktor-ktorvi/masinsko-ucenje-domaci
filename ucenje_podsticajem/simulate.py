@@ -125,16 +125,18 @@ if __name__ == '__main__':
 
     plot_value_functions(v_values_dict, num_episodes)
 
+    # evaluate the trained model
     agent.eval()
     rewards_test, _, _ = simulate(grid_environment, agent, num_episodes=10)
 
     print('Srednja vrednost nagrade pri testiranju = {:2.2f}'.format(np.mean(rewards_test)))
 
-    plt.figure()
+    plt.figure()  # plot the reward over the evaluation episodes
     plt.plot(rewards_test)
     plt.xlabel('epizoda')
     plt.ylabel('R')
 
+    # print an episode
     grid_environment.reset()
     agent.memoryReset()
     observation, _, terminate = grid_environment.step()  # initial step
@@ -147,5 +149,3 @@ if __name__ == '__main__':
         grid_environment.printMap()
 
     plt.show()
-
-
