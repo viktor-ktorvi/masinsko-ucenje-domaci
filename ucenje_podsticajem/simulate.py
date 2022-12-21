@@ -10,17 +10,19 @@ from ucenje_podsticajem.agent import AgentQ
 from ucenje_podsticajem.grid_environment import GridEnvironment
 
 
-def simulate(grid_environment, agent, num_episodes=10, decrease_lr=False):
+def simulate(grid_environment, agent, num_episodes=10, decrease_lr=False, time_penalty_weight=0.1):
     """
     Simulate the agent playing in the environment. The agent can be in both train and eval mode.
     :param grid_environment: GridEnvironment
     :param agent: AgentQ
     :param num_episodes: int
     :param decrease_lr: boolean
-    :return: tuple(List[int/float], List[float], Dict); reward after each episode, epsilon after each episode, a dictionary of value functions per state, per episode
+    :return: tuple(List[int/float], List[float], List[int],Dict); reward after each episode, epsilon after each episode,
+    list of how long it took to converge, a dictionary of value functions per state, per episode
     """
     rewards = []  # record the reward and epsilon values
     epsilon = []
+    epochs = []
 
     v_values_dict = {}  # record the V values for the individual states
     for state in grid_environment.valid_states:
@@ -45,15 +47,16 @@ def simulate(grid_environment, agent, num_episodes=10, decrease_lr=False):
                 learning_rate = np.log(epoch + 1) / (epoch + 1) * agent.init_learning_rate
             else:
                 learning_rate = agent.init_learning_rate
-            agent.observe(observation, reward, learning_rate)
+            agent.observe(observation, reward - epoch * time_penalty_weight, learning_rate)
 
             epoch += 1
 
         # collect data
         rewards.append(reward)
         epsilon.append(agent.epsilon)
+        epochs.append(epoch)
 
-    return rewards, epsilon, v_values_dict
+    return rewards, epsilon, epochs, v_values_dict
 
 
 def plot_value_functions(v_values_dict, num_episodes):
@@ -93,23 +96,24 @@ def plot_value_functions(v_values_dict, num_episodes):
 
 if __name__ == '__main__':
     num_episodes = 1000
-    learning_rate = 0.1
-    init_epsilon = 0.98
+    learning_rate = 0.05
+    init_epsilon = 0.97
     decrease_lr = True
+    time_penalty_weight = 0.0
 
     # init env and agent
     grid_environment = GridEnvironment()
     agent = AgentQ(grid_environment.height, grid_environment.width, init_epsilon=init_epsilon, init_learning_rate=learning_rate)
     agent.train()
 
-    rewards, epsilon, v_values_dict = simulate(grid_environment, agent, num_episodes=num_episodes, decrease_lr=decrease_lr)
+    rewards, epsilon, steps, v_values_dict = simulate(grid_environment, agent, num_episodes=num_episodes, decrease_lr=decrease_lr, time_penalty_weight=time_penalty_weight)
 
 
     def running_average(x, window_size):
         return np.convolve(x, np.ones(window_size) / window_size, mode='valid')
 
 
-    fig, ax = plt.subplots(2, 1, sharex='col')
+    fig, ax = plt.subplots(3, 1, sharex='col')
 
     ax[0].set_title('Nagrada')
     ax[0].plot(rewards, label='nagrada', alpha=0.6)
@@ -121,15 +125,23 @@ if __name__ == '__main__':
     ax[1].plot(epsilon)
     ax[1].set_ylabel('$\epsilon$')
 
+    ax[2].set_title('Broj koraka')
+    ax[2].plot(steps, label='koraci')
+    ax[2].plot(running_average(steps, 15), label='srednja vrednost koraka')
+    ax[2].set_ylabel('#')
+    ax[2].legend()
+
+
     plt.xlabel('epizoda')
 
     plot_value_functions(v_values_dict, num_episodes)
 
     # evaluate the trained model
     agent.eval()
-    rewards_test, _, _ = simulate(grid_environment, agent, num_episodes=10)
+    rewards_test, _, steps_test, _ = simulate(grid_environment, agent, num_episodes=100)
 
     print('Srednja vrednost nagrade pri testiranju = {:2.2f}'.format(np.mean(rewards_test)))
+    print('Srednji broj koraka da se partija zavrsi = {:2.2f}'.format(np.mean(steps_test)))
 
     plt.figure()  # plot the reward over the evaluation episodes
     plt.plot(rewards_test)
@@ -140,12 +152,15 @@ if __name__ == '__main__':
     grid_environment.reset()
     agent.memoryReset()
     observation, _, terminate = grid_environment.step()  # initial step
-    grid_environment.printMap()
 
+    step = 0
+    grid_environment.printMap(step=step)
     while not terminate:
         action = agent.act(observation)
         observation, _, terminate = grid_environment.step(action)
         print('True action = {:s}'.format(action.name))
-        grid_environment.printMap()
+
+        step += 1
+        grid_environment.printMap(step=step)
 
     plt.show()
