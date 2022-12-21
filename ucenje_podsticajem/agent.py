@@ -31,16 +31,23 @@ class AgentQ:
         self.state_width = state_width
         self.train_mode = False
 
-        self.reset(reset_epsilon=True)
+        self.fullReset()
 
-    def reset(self, reset_epsilon=False):
+    def fullReset(self):
         """
-        Reset the agent.
+        Reset everything in the agent.
         :return:
         """
-        if reset_epsilon:
-            self.epsilon = self.init_epsilon
+
+        self.epsilon = self.init_epsilon
         self.Q_table = np.zeros((self.state_height, self.state_width, len(ActionTypes)), dtype=np.float32)
+        self.memoryReset()
+
+    def memoryReset(self):
+        """
+        Reset the memory of the previous state and action.
+        :return:
+        """
         self.prev_action = None
         self.prev_state = None
 
@@ -85,6 +92,14 @@ class AgentQ:
         temporal_difference = q_estimate - self.Q_table[self.prev_state.row, self.prev_state.column, self.prev_action]  # temporal difference of estimate VS observed action value function
 
         self.Q_table[self.prev_state.row, self.prev_state.column, self.prev_action] += learning_rate * temporal_difference  # update
+
+    def getMaxQ(self, state):
+        """
+        Return the maximum value of the action value function for the given state.
+        :param state: State2D
+        :return: float
+        """
+        return np.max(self.Q_table[state.row, state.column, :])
 
     def act(self, state):
         """
