@@ -1,5 +1,7 @@
 import unittest
 
+import numpy as np
+
 from collections import Counter
 
 from ucenje_podsticajem.agent import ActionTypes
@@ -40,6 +42,32 @@ class StochasticityTest(unittest.TestCase):
                 except AssertionError:
                     print(counter)
                     raise AssertionError
+
+    def test_death_rate(self):
+        """
+        Test the death rate for out given environment when going just RIGHT
+        :return:
+        """
+        stochasticity = 0.4
+        num_episodes = 10000
+        grid_environment = GridEnvironment(stochasticity=stochasticity)
+        results = []
+        reward = None
+
+        for i in range(num_episodes):
+
+            terminate = False
+            grid_environment.reset()
+            while not terminate:
+                observation, reward, terminate = grid_environment.step(ActionTypes.RIGHT)
+
+            if reward > 0:
+                results.append(1)
+            else:
+                results.append(0)
+
+        print(np.mean(results))
+        self.assertLess(np.mean(results), 0.6)  # this can be calculated
 
 
 if __name__ == '__main__':
