@@ -4,7 +4,7 @@ import numpy as np
 
 from enum import IntEnum
 
-from ucenje_podsticajem.agent import ActionTypes
+from ucenje_podsticajem.action_types import ActionTypes
 
 
 class FieldTypes(IntEnum):

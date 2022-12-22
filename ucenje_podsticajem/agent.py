@@ -2,16 +2,11 @@ import random
 
 import numpy as np
 
-from enum import IntEnum
 from scipy.special import softmax
 from sklearn.preprocessing import OneHotEncoder
 
-
-class ActionTypes(IntEnum):
-    UP = 0
-    DOWN = 1
-    LEFT = 2
-    RIGHT = 3
+from ucenje_podsticajem.action_types import ActionTypes
+from ucenje_podsticajem.feature_encoder import train_feature_encoder
 
 
 class AgentQ:
@@ -123,8 +118,10 @@ class AgentQ:
 
 
 class AgentREINFORCE:
-    def __init__(self, state_dimension):
-        self.theta = np.random.randn(state_dimension + len(ActionTypes), 1)
+    def __init__(self, **kwargs):
+        self.feature_encoder = train_feature_encoder(**kwargs)
+
+        self.theta = np.random.randn(self.feature_encoder.coefs_[-2].shape[1], 1)
 
         enc = OneHotEncoder()
         self.action_encodings = enc.fit_transform(np.arange(len(ActionTypes)).reshape((len(ActionTypes), 1))).toarray()
@@ -170,7 +167,7 @@ class AgentREINFORCE:
 
         scores = []
         for i in range(len(observations)):
-            scores.append(self.score(observations[i])[actions[i]].reshape(self.theta.shape))    # num_time_steps x num_features x 1
+            scores.append(self.score(observations[i])[actions[i]].reshape(self.theta.shape))  # num_time_steps x num_features x 1
 
         # multiply scores and values timestep wise and sum them up
         total_update = np.sum(v[:, np.newaxis, np.newaxis] * np.array(scores), axis=0)
@@ -183,18 +180,15 @@ class AgentREINFORCE:
         :param state: State2d
         :return: np.ndarray; shape num_actions x (state_dimension + num_actions)
         """
-        return np.hstack((np.tile(state.toArray(), (len(ActionTypes), 1)), self.action_encodings))
+        input_features = np.hstack((np.tile(state.toArray(), (len(ActionTypes), 1)), self.action_encodings))
+
+        out = input_features
+        for i in range(len(self.feature_encoder.coefs_) - 1):
+            out = out @ self.feature_encoder.coefs_[i] + self.feature_encoder.intercepts_[i]
+
+        return out
 
 
 if __name__ == '__main__':
     agentQ = AgentQ(4, 7)
     print(agentQ.Q_table.shape)
-
-    agentR = AgentREINFORCE(2)
-
-    from ucenje_podsticajem.grid_environment import State2D
-
-    state = State2D(1, 3)
-    agentR.act(state)
-
-    debug_var = None

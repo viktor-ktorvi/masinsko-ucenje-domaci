@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     # init env and agent
     grid_environment = GridEnvironment()
-    agent = AgentREINFORCE(state_dimension=2)
+    agent = AgentREINFORCE(num_episodes=10000, grid_environment=grid_environment, hidden_layer_sizes=(20,))
 
     rewards = []
 
