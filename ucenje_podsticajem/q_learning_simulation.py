@@ -110,6 +110,14 @@ if __name__ == '__main__':
 
     rewards, epsilon, steps, v_values_dict = simulate(grid_environment, agent, num_episodes=num_episodes, decrease_lr=decrease_lr, time_penalty_weight=time_penalty_weight)
 
+    plt.figure()
+    plt.plot(rewards, label='nagrada', alpha=0.6)
+    plt.plot(running_average(rewards, 20), label='srednja nagrada')
+    plt.ylabel('R')
+    plt.xlabel('epizoda')
+    # plt.xscale('log')
+    plt.legend()
+
     fig, ax = plt.subplots(3, 1, sharex='col')
 
     ax[0].set_title('Nagrada')
