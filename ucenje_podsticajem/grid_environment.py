@@ -1,5 +1,7 @@
 import random
 
+import numpy as np
+
 from enum import IntEnum
 
 from ucenje_podsticajem.agent import ActionTypes
@@ -43,6 +45,13 @@ class State2D:
         :return: boolean
         """
         return row == self.row and column == self.column
+
+    def toArray(self):
+        """
+        Return the row and column as a numpy array.
+        :return: np.ndarray
+        """
+        return np.array([self.row, self.column]).reshape(1, 2)
 
 
 class GridEnvironment:
