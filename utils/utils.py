@@ -101,6 +101,16 @@ class DataLoader:
         return batches
 
 
+def running_average(x, window_size):
+    """
+    Average over a rectangular window.
+    :param x: array like
+    :param window_size: int
+    :return: np.ndarray
+    """
+    return np.convolve(x, np.ones(window_size) / window_size, mode='valid')
+
+
 if __name__ == '__main__':
     # cross_norm_sqrd
 

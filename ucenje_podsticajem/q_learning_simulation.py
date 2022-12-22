@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 
 from ucenje_podsticajem.agent import AgentQ
 from ucenje_podsticajem.grid_environment import GridEnvironment
+from utils.utils import running_average
 
 
 def simulate(grid_environment, agent, num_episodes=10, decrease_lr=False, time_penalty_weight=0.1):
@@ -108,11 +109,6 @@ if __name__ == '__main__':
     agent.train()
 
     rewards, epsilon, steps, v_values_dict = simulate(grid_environment, agent, num_episodes=num_episodes, decrease_lr=decrease_lr, time_penalty_weight=time_penalty_weight)
-
-
-    def running_average(x, window_size):
-        return np.convolve(x, np.ones(window_size) / window_size, mode='valid')
-
 
     fig, ax = plt.subplots(3, 1, sharex='col')
 
