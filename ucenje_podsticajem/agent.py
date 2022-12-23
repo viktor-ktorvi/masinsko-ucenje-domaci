@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 from enum import IntEnum
-from scipy.special import softmax
+from scipy.stats import multivariate_normal
 from sklearn.preprocessing import OneHotEncoder
 
 
@@ -123,8 +123,13 @@ class AgentQ:
 
 
 class AgentREINFORCE:
-    def __init__(self, state_dimension):
+    def __init__(self, state_dimension, cov=None):
         self.theta = np.random.randn(state_dimension + len(ActionTypes), 1)
+        if cov is None:
+            cov = np.eye(len(ActionTypes))
+        self.cov = cov
+
+        assert self.cov.shape == (len(ActionTypes), len(ActionTypes))
 
         enc = OneHotEncoder()
         self.action_encodings = enc.fit_transform(np.arange(len(ActionTypes)).reshape((len(ActionTypes), 1))).toarray()
@@ -135,13 +140,12 @@ class AgentREINFORCE:
         """
         Calculate the agents' policy for the given state. Return the features as well.
         :param state: State2D
-        :return: tuple(np.ndarray); np.ndarray; shape num_actions x 1 - policy |
-                                    np.ndarray; shape num_actions x (state_dimension + num_actions) features
+        :return: np.ndarray; shape num_actions x 1 - policy
         """
         features = self.constructFeatures(state)
-        policy = softmax(features @ self.theta)  # calculate the policy
-
-        return policy, features
+        mean = features @ self.theta
+        policy = multivariate_normal.pdf(self.action_encodings, mean=mean.squeeze(), cov=self.cov)
+        return policy
 
     def act(self, state):
         """
@@ -149,16 +153,20 @@ class AgentREINFORCE:
         :param state: State2D
         :return: ActionTypes
         """
-        policy, _ = self.policy(state)
+        policy = self.policy(state) + 1e-3
 
-        action = random.choices(self.action_list, weights=list(policy.flatten()))[0]  # sample from the policy
 
+        # action = random.choices(self.action_list, weights=list(policy.flatten()))[0]  # sample from the policy
+        try:
+            action = np.random.choice(self.action_list, p=policy)
+        except:
+            print('except')
         return action
 
     def score(self, state):
-        policy, features = self.policy(state)
+        features = self.constructFeatures(state)
 
-        score = features - np.sum(features * policy, axis=0)
+        score = (self.action_encodings - features @ self.theta) @ features / np.linalg.det(self.cov) ** 2
 
         return score
 
@@ -170,7 +178,7 @@ class AgentREINFORCE:
 
         scores = []
         for i in range(len(observations)):
-            scores.append(self.score(observations[i])[actions[i]].reshape(self.theta.shape))    # num_time_steps x num_features x 1
+            scores.append(self.score(observations[i])[actions[i]].reshape(self.theta.shape))  # num_time_steps x num_features x 1
 
         # multiply scores and values timestep wise and sum them up
         total_update = np.sum(v[:, np.newaxis, np.newaxis] * np.array(scores), axis=0)
