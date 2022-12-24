@@ -97,11 +97,11 @@ def plot_value_functions(v_values_dict, num_episodes):
 
 if __name__ == '__main__':
     num_episodes = 1000
-    learning_rate = 0.05
+    learning_rate = 0.01
     init_epsilon = 0.97
-    decrease_lr = True
+    decrease_lr = False
     time_penalty_weight = 0.0
-    gamma = 0.9
+    gamma = 0.999
 
     # init env and agent
     grid_environment = GridEnvironment()
