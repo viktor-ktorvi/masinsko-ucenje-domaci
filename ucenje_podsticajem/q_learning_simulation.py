@@ -88,7 +88,7 @@ def plot_value_functions(v_values_dict, num_episodes):
         # a state can remain unvisited in an episode, so we interpolate in those cases
         interpolation_function = interpolate.interp1d(unique_episode_ids, v_values_averaged_per_episode, kind='previous', fill_value="extrapolate")
 
-        plt.plot(interpolation_function(full_episode_ids), label='s = ({:d}, {:d})'.format(state.row, state.column))
+        plt.plot(interpolation_function(full_episode_ids), label='s = ({:s}, {:d})'.format(chr(ord('A') - 1 + state.row), state.column))
 
     plt.xlabel('epizoda')
     plt.ylabel('$V_{epizoda}(s)$')
@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
     plt.figure()
     plt.plot(rewards, label='nagrada', alpha=0.6)
-    plt.plot(running_average(rewards, 20), label='srednja nagrada')
+    plt.plot(running_average(rewards, 20), label='srednja nagrada', linewidth=3)
     plt.ylabel('R')
     plt.xlabel('epizoda')
     # plt.xscale('log')
